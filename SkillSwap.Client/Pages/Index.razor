@@ -1,0 +1,236 @@
+@page "/"
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject IWalletService WalletService
+@using Microsoft.AspNetCore.Components.Authorization
+
+<AuthorizeView>
+    <Authorized>
+        <div class="container page-container">
+            <!-- Dashboard Top Info Banner -->
+            <div class="dashboard-top-info">
+                <div class="info-left">
+                    <div class="info-icon">⚡</div>
+                    <div class="info-text">
+                        <h3>Today's Activity</h3>
+                        <p>Track your learning journey</p>
+                    </div>
+                </div>
+                <div class="info-right">
+                    <div class="date">@DateTime.Now.ToString("dddd, MMMM dd, yyyy")</div>
+                    <div class="time">@DateTime.Now.ToString("hh:mm tt")</div>
+                </div>
+            </div>
+
+            <div class="dashboard-header">
+                <h1>Welcome back, @context.User.Identity?.Name! 👋</h1>
+                <p>Your SkillSwap Dashboard</p>
+            </div>
+
+            @if (wallet != null)
+            {
+                <div class="balance-card">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--spacing-6);">
+                        <div>
+                            <h2 style="font-size: 1.75rem; margin-bottom: var(--spacing-2);">Your Time Bank</h2>
+                            <p style="opacity: 0.95; margin: 0;">Available to spend on learning sessions</p>
+                        </div>
+                       <button type="button"
+                                class="btn btn-secondary"
+                                style="text-decoration: none; position: relative; z-index: 5; pointer-events: auto;"
+                                @onclick="GoToWallet">
+                            View Details
+                        </button>
+                    </div>
+
+                    <div class="balance-display">
+                        <div class="balance-item">
+                            <span class="balance-label">
+                                <svg style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                </svg>
+                                Available
+                            </span>
+                            <div class="balance-amount">@wallet.AvailableBalance.ToString("F1")</div>
+                            <small style="opacity: 0.9;">credits</small>
+                        </div>
+
+                        <div class="balance-item">
+                            <span class="balance-label">
+                                <svg style="width: 20px; height: 20px; display: inline-block; vertical-align: middle; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>
+                                </svg>
+                                In Escrow
+                            </span>
+                            <div class="balance-amount">@wallet.EscrowBalance.ToString("F1")</div>
+                            <small style="opacity: 0.9;">credits</small>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="dashboard-grid" style="margin-top: var(--spacing-8);">
+                <div class="card card-hover" @onclick='() => Navigation.NavigateTo("/profile")' style="cursor: pointer;">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-100), var(--primary-200)); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-4);">
+                            <svg style="width: 40px; height: 40px; color: var(--primary-600);" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: var(--spacing-2);">My Profile</h3>
+                        <p style="color: var(--gray-600); margin: 0;">View and edit your profile information</p>
+                    </div>
+                </div>
+
+                <div class="card card-hover" @onclick='() => Navigation.NavigateTo("/wallet")' style="cursor: pointer;">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--success-50), #d1fae5); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-4);">
+                            <svg style="width: 40px; height: 40px; color: var(--success-600);" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
+                                <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: var(--spacing-2);">My Wallet</h3>
+                        <p style="color: var(--gray-600); margin: 0;">Manage your time credits and transactions</p>
+                    </div>
+                </div>
+
+                <div class="card" style="opacity: 0.6; cursor: not-allowed;">
+                    <div class="card-body" style="text-align: center;">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--gray-100), var(--gray-200)); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-4);">
+                            <svg style="width: 40px; height: 40px; color: var(--gray-500);" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
+                            </svg>
+                        </div>
+                        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: var(--spacing-2);">Browse Skills</h3>
+                        <p style="color: var(--gray-600); margin: 0;">
+                            Coming soon — Explore available tutors
+                            <span style="display: inline-block; margin-left: var(--spacing-2); padding: 2px 8px; background: var(--warning-500); color: white; border-radius: var(--radius-full); font-size: 0.625rem; font-weight: 700;">SOON</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card dashboard-info-card" style="margin-top: var(--spacing-8);">
+                <div class="card-body">
+                    <div style="display: flex; align-items: start; gap: var(--spacing-4);">
+                        <div style="width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <span style="font-size: 2rem;">🎉</span>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: var(--spacing-2);">Welcome to SkillSwap!</h3>
+                            <p style="margin-bottom: var(--spacing-3); line-height: 1.6;">
+                                You've received <strong style="color: var(--primary-900);">2 free time credits</strong> to get started!
+                                Use them to book your first learning session.
+                            </p>
+                            <p style="margin: 0; line-height: 1.6;">
+                                Want to earn more credits? Offer your skills and teach others in the community!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div style="margin-top: var(--spacing-8); display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-4);">
+                <div style="background: white; padding: var(--spacing-5); border-radius: var(--radius-xl); border: 1px solid var(--gray-200);">
+                    <div style="color: var(--gray-600); font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-2);">TOTAL SESSIONS</div>
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--gray-900);">0</div>
+                </div>
+                <div style="background: white; padding: var(--spacing-5); border-radius: var(--radius-xl); border: 1px solid var(--gray-200);">
+                    <div style="color: var(--gray-600); font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-2);">HOURS LEARNED</div>
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--gray-900);">0.0</div>
+                </div>
+                <div style="background: white; padding: var(--spacing-5); border-radius: var(--radius-xl); border: 1px solid var(--gray-200);">
+                    <div style="color: var(--gray-600); font-size: 0.875rem; font-weight: 600; margin-bottom: var(--spacing-2);">HOURS TAUGHT</div>
+                    <div style="font-size: 2rem; font-weight: 800; color: var(--gray-900);">0.0</div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+
+    <NotAuthorized>
+        <div class="auth-container">
+            <div class="auth-card">
+                <div class="card-body" style="padding: var(--spacing-10);">
+                    <div class="auth-header">
+                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, var(--primary-600), var(--primary-800)); border-radius: var(--radius-2xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-5); box-shadow: var(--shadow-xl);">
+                            <span style="font-size: 2.5rem;">🎓</span>
+                        </div>
+                        <h1 style="font-size: 2.25rem; margin-bottom: var(--spacing-3);">SkillSwap</h1>
+                        <p style="font-size: 1.125rem; color: var(--gray-600); margin-bottom: var(--spacing-8);">Exchange skills, not money. Learn from peers, teach what you know.</p>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-3);">
+                        <a href="/login" class="btn btn-primary btn-lg" style="text-decoration: none;">
+                            <span>Sign In</span>
+                            <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                            </svg>
+                        </a>
+                        <a href="/register" class="btn btn-secondary btn-lg" style="text-decoration: none;">
+                            <span>Get Started</span>
+                            <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </a>
+                    </div>
+
+                    <div style="margin-top: var(--spacing-8); padding-top: var(--spacing-8); border-top: 1px solid var(--gray-200);">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-6); text-align: center;">
+                            <div>
+                                <div style="font-size: 2rem; margin-bottom: var(--spacing-2);">⏱️</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Time-Based Exchange</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; margin-bottom: var(--spacing-2);">🤝</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Peer Learning</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; margin-bottom: var(--spacing-2);">🌟</div>
+                                <div style="font-size: 0.875rem; color: var(--gray-600); font-weight: 600;">Skill Building</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private Models.Wallet? wallet;
+
+    private void GoToWallet()
+{
+    Navigation.NavigateTo("/wallet");
+}
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            await LoadWallet();
+        }
+    }
+
+   private async Task LoadWallet()
+{
+    try
+    {
+        var result = await WalletService.GetWalletAsync();
+        if (result.Success)
+        {
+            wallet = result.Data;
+            StateHasChanged(); 
+        }
+    }
+    catch
+    {
+    }
+}
+
+}

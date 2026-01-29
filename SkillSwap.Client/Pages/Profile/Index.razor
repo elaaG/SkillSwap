@@ -1,0 +1,292 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<div class="container page-container">
+    @if (isLoading)
+    {
+        <div class="spinner"></div>
+    }
+    else if (profile != null)
+    {
+        <div class="profile-header">
+            <img src="@(string.IsNullOrEmpty(profile.ProfilePictureUrl) ? "https://ui-avatars.com/api/?name=" + Uri.EscapeDataString(profile.FullName) + "&size=280&background=6366f1&color=fff&bold=true" : profile.ProfilePictureUrl)" 
+                 alt="@profile.FullName" 
+                 class="profile-avatar" />
+            
+            <div class="profile-info">
+                <h1>@profile.FullName</h1>
+                <div class="profile-meta">
+                    <span>
+                        <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                        </svg>
+                        @profile.Email
+                    </span>
+                    <span>
+                        <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                        </svg>
+                        Member since @profile.MemberSince.ToString("MMM yyyy")
+                    </span>
+                </div>
+                <div style="margin-top: var(--spacing-5); display: flex; gap: var(--spacing-3); flex-wrap: wrap;">
+                    @if (profile.AverageRating.HasValue)
+                    {
+                        <span class="stat-badge" style="background: linear-gradient(135deg, #fbbf24, #f59e0b); color: white;">
+                            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            @profile.AverageRating.Value.ToString("F1") rating
+                        </span>
+                    }
+                    <span class="stat-badge" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                        <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        @profile.TotalSessionsCompleted sessions
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="card-title">Profile Information</h3>
+                @if (!isEditing)
+                {
+                    <button class="btn btn-primary" @onclick="EnableEdit">
+                        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        Edit Profile
+                    </button>
+                }
+            </div>
+            <div class="card-body">
+                @if (isEditing)
+                {
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success">
+                            <strong>✓ Success!</strong> @successMessage
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger">
+                            <strong>⚠️ Error:</strong> @errorMessage
+                        </div>
+                    }
+
+                    <EditForm Model="@updateRequest" OnValidSubmit="HandleUpdateProfile">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <InputText @bind-Value="updateRequest.FullName" 
+                                       class="form-control" 
+                                       placeholder="Your full name" />
+                            <ValidationMessage For="@(() => updateRequest.FullName)" class="validation-message" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Bio</label>
+                            <InputTextArea @bind-Value="updateRequest.Bio" 
+                                           class="form-control" 
+                                           placeholder="Tell others about yourself, your skills, and what you'd like to learn..."
+                                           rows="5" />
+                            <small class="form-text">Share your expertise and learning goals</small>
+                            <ValidationMessage For="@(() => updateRequest.Bio)" class="validation-message" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Profile Picture URL</label>
+                            <InputText @bind-Value="updateRequest.ProfilePictureUrl" 
+                                       class="form-control" 
+                                       placeholder="https://example.com/your-photo.jpg" />
+                            <small class="form-text">Optional: Provide a link to your profile picture</small>
+                            <ValidationMessage For="@(() => updateRequest.ProfilePictureUrl)" class="validation-message" />
+                        </div>
+
+                        <div style="display: flex; gap: var(--spacing-3); margin-top: var(--spacing-6);">
+                            <button type="submit" class="btn btn-success" disabled="@isSaving">
+                                @if (isSaving)
+                                {
+                                    <span class="spinner-small"></span>
+                                    <span>Saving...</span>
+                                }
+                                else
+                                {
+                                    <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    <span>Save Changes</span>
+                                }
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@isSaving">
+                                <span>Cancel</span>
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <div style="display: grid; gap: var(--spacing-6);">
+                        <div>
+                            <label style="font-weight: 600; color: var(--gray-600); font-size: 0.875rem; display: block; margin-bottom: var(--spacing-2); text-transform: uppercase; letter-spacing: 0.05em;">
+                                Email Address
+                            </label>
+                            <p style="margin: 0; font-size: 1rem; color: var(--gray-900);">@profile.Email</p>
+                        </div>
+
+                        <div>
+                            <label style="font-weight: 600; color: var(--gray-600); font-size: 0.875rem; display: block; margin-bottom: var(--spacing-2); text-transform: uppercase; letter-spacing: 0.05em;">
+                                About Me
+                            </label>
+                            @if (!string.IsNullOrEmpty(profile.Bio))
+                            {
+                                <p style="margin: 0; white-space: pre-line; line-height: 1.7; color: var(--gray-700);">@profile.Bio</p>
+                            }
+                            else
+                            {
+                                <div style="padding: var(--spacing-8); background: var(--gray-50); border-radius: var(--radius-lg); text-align: center; border: 2px dashed var(--gray-300);">
+                                    <svg style="width: 48px; height: 48px; margin: 0 auto var(--spacing-3); color: var(--gray-400);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    <p style="margin: 0; color: var(--gray-500); font-weight: 500;">No bio added yet</p>
+                                    <p style="margin: var(--spacing-2) 0 0; color: var(--gray-400); font-size: 0.875rem;">Click "Edit Profile" to add your bio</p>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger">
+            <strong>⚠️ Error:</strong> @errorMessage
+        </div>
+    }
+</div>
+
+<style>
+    .validation-message {
+        color: var(--danger-600);
+        font-size: 0.8125rem;
+        margin-top: var(--spacing-2);
+        display: block;
+    }
+
+    .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: inline-block;
+    }
+</style>
+
+@code {
+    private UserProfile? profile;
+    private UpdateProfileRequest updateRequest = new();
+    private bool isLoading = true;
+    private bool isEditing = false;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await UserService.GetProfileAsync();
+            if (result.Success)
+            {
+                profile = result.Data;
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to load profile. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void EnableEdit()
+    {
+        if (profile != null)
+        {
+            updateRequest = new UpdateProfileRequest
+            {
+                FullName = profile.FullName,
+                Bio = profile.Bio,
+                ProfilePictureUrl = profile.ProfilePictureUrl
+            };
+            isEditing = true;
+            successMessage = null;
+            errorMessage = null;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var result = await UserService.UpdateProfileAsync(updateRequest);
+            if (result.Success)
+            {
+                profile = result.Data;
+                isEditing = false;
+                successMessage = "Profile updated successfully!";
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Failed to update profile. Please try again.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

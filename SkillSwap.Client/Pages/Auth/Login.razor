@@ -1,0 +1,118 @@
+@page "/login"
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+<div class="auth-container">
+    <div class="auth-card card">
+        <div class="card-body" style="padding: var(--spacing-10);">
+            <div class="auth-header">
+                <div style="width: 64px; height: 64px; background: linear-gradient(135deg, var(--primary-600), var(--primary-800)); border-radius: var(--radius-xl); display: flex; align-items: center; justify-content: center; margin: 0 auto var(--spacing-4); box-shadow: var(--shadow-lg);">
+                    <span style="font-size: 2rem;">🎓</span>
+                </div>
+                <h1>Welcome Back</h1>
+                <p>Sign in to continue your learning journey</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <strong>⚠️ Error:</strong> @errorMessage
+                </div>
+            }
+
+            <EditForm Model="@loginRequest" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <InputText @bind-Value="loginRequest.Email" 
+                               class="form-control" 
+                               placeholder="name@example.com"
+                               autocomplete="email" />
+                    <ValidationMessage For="@(() => loginRequest.Email)" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <InputText @bind-Value="loginRequest.Password" 
+                               type="password" 
+                               class="form-control" 
+                               placeholder="Enter your password"
+                               autocomplete="current-password" />
+                    <ValidationMessage For="@(() => loginRequest.Password)" class="validation-message" />
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-small"></span>
+                        <span>Signing in...</span>
+                    }
+                    else
+                    {
+                        <span>Sign In</span>
+                        <span>→</span>
+                    }
+                </button>
+            </EditForm>
+
+            <div class="auth-footer">
+                <p>Don't have an account? <a href="/register">sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    
+</div>
+
+<style>
+    .validation-message {
+        color: var(--danger-600);
+        font-size: 0.8125rem;
+        margin-top: var(--spacing-2);
+        display: block;
+    }
+
+    .spinner-small {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: inline-block;
+    }
+</style>
+
+@code {
+    private LoginRequest loginRequest = new();
+    private bool isLoading = false;
+    private string? errorMessage;
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(loginRequest);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An unexpected error occurred. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
