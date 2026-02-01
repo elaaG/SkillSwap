@@ -238,6 +238,141 @@ namespace SkillSwap.Api.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("SkillSwap.API.Models.Listing", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreditsPerHour")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(800)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Listings_CreatedAt");
+
+                    b.HasIndex("ProviderId")
+                        .HasDatabaseName("IX_Listings_ProviderId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Listings_Status");
+
+                    b.ToTable("Listings", (string)null);
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.ListingAvailability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBooked")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ListingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EndTime")
+                        .HasDatabaseName("IX_ListingAvailabilities_EndTime");
+
+                    b.HasIndex("ListingId")
+                        .HasDatabaseName("IX_ListingAvailabilities_ListingId");
+
+                    b.HasIndex("StartTime")
+                        .HasDatabaseName("IX_ListingAvailabilities_StartTime");
+
+                    b.ToTable("ListingAvailabilities", (string)null);
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.ListingSkill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ListingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProficiencyLevel")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SkillId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SkillId")
+                        .HasDatabaseName("IX_ListingSkills_SkillId");
+
+                    b.HasIndex("ListingId", "SkillId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ListingSkills_Unique");
+
+                    b.ToTable("ListingSkills", (string)null);
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.Skill", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Skills_Name_Unique");
+
+                    b.ToTable("Skills", (string)null);
+                });
+
             modelBuilder.Entity("SkillSwap.API.Models.TransactionLog", b =>
                 {
                     b.Property<int>("Id")
@@ -315,6 +450,9 @@ namespace SkillSwap.Api.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SkillId")
+                        .HasDatabaseName("IX_UserSkills_SkillId");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserSkills_UserId");
@@ -410,6 +548,47 @@ namespace SkillSwap.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SkillSwap.API.Models.Listing", b =>
+                {
+                    b.HasOne("SkillSwap.API.Models.ApplicationUser", "Provider")
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Provider");
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.ListingAvailability", b =>
+                {
+                    b.HasOne("SkillSwap.API.Models.Listing", "Listing")
+                        .WithMany("ListingAvailabilities")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.ListingSkill", b =>
+                {
+                    b.HasOne("SkillSwap.API.Models.Listing", "Listing")
+                        .WithMany("ListingSkills")
+                        .HasForeignKey("ListingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("SkillSwap.API.Models.Skill", "Skill")
+                        .WithMany()
+                        .HasForeignKey("SkillId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Listing");
+
+                    b.Navigation("Skill");
+                });
+
             modelBuilder.Entity("SkillSwap.API.Models.TransactionLog", b =>
                 {
                     b.HasOne("SkillSwap.API.Models.ApplicationUser", "FromUser")
@@ -430,11 +609,19 @@ namespace SkillSwap.Api.Migrations
 
             modelBuilder.Entity("SkillSwap.API.Models.UserSkill", b =>
                 {
+                    b.HasOne("SkillSwap.API.Models.Skill", "Skill")
+                        .WithMany("UserSkills")
+                        .HasForeignKey("SkillId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("SkillSwap.API.Models.ApplicationUser", "User")
                         .WithMany("UserSkills")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Skill");
 
                     b.Navigation("User");
                 });
@@ -455,6 +642,18 @@ namespace SkillSwap.Api.Migrations
                     b.Navigation("UserSkills");
 
                     b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.Listing", b =>
+                {
+                    b.Navigation("ListingAvailabilities");
+
+                    b.Navigation("ListingSkills");
+                });
+
+            modelBuilder.Entity("SkillSwap.API.Models.Skill", b =>
+                {
+                    b.Navigation("UserSkills");
                 });
 #pragma warning restore 612, 618
         }
