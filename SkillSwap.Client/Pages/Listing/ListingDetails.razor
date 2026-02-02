@@ -1,0 +1,78 @@
+﻿@page "/listings/{id:int}"
+@inject IListingService ListingService
+@inject LocalSkillStore LocalStore
+@inject NavigationManager Nav
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+
+@code {
+    [Parameter] public int id { get; set; }
+}
+
+@if (listing == null) { <p>Loading…</p> }
+else
+{
+    <div class="detail-card">
+        <div class="detail-header">
+            <h2>@listing.Title</h2>
+            <div class="meta">@listing.CreditsPerHour hrs/hr • @listing.Status</div>
+        </div>
+
+        <p>@listing.Description</p>
+
+        <h4>Skills</h4>
+        <div class="chips">
+            @foreach(var s in listing.Skills)
+            {
+                <span class="chip">@s.SkillName <small class="muted">(@s.ProficiencyLevel)</small></span>
+            }
+        </div>
+
+        <h4>Availability</h4>
+        <ul>
+            @foreach(var a in listing.ListingAvailabilities)
+            {
+                <li>@a.StartTime.ToString("f") — @a.EndTime.ToString("f")</li>
+            }
+        </ul>
+
+        @if (isMatch)
+        {
+            <div class="match-explain">
+                <strong>Good match</strong> — this listing matches @matchCount skill(s) from your Needs list.
+                <button class="btn btn-primary" @onclick="Book">Request Booking</button>
+            </div>
+        }
+        else
+        {
+            <button class="btn btn-outline" @onclick="Contact">Contact Provider</button>
+        }
+    </div>
+}
+
+@code {
+    private Listing? listing;
+    private bool isMatch = false;
+    private int matchCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var r = await ListingService.GetListingByIdAsync(id);
+        if (r.Success) listing = r.Data;
+
+        var needs = await LocalStore.GetNeedAsync();
+        var set = new HashSet<int>(needs);
+        if (listing != null)
+        {
+            matchCount = listing.Skills.Count(s => set.Contains(s.SkillId));
+            isMatch = matchCount > 0;
+        }
+    }
+
+    private void Book()
+    {
+        // navigate to booking flow (slice 3) — placeholder
+        Nav.NavigateTo("/book/"+id);
+    }
+    private void Contact() { /* open messaging or show provider profile */ }
+}

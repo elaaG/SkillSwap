@@ -44,9 +44,15 @@ namespace SkillSwap.API.Controllers
             var providerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrWhiteSpace(providerId))
                 return Unauthorized();
-
-            var created = await _service.CreateAsync(providerId, dto);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            try
+            {
+                var created = await _service.CreateAsync(providerId, dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [Authorize]
@@ -57,10 +63,20 @@ namespace SkillSwap.API.Controllers
             if (string.IsNullOrWhiteSpace(providerId))
                 return Unauthorized();
 
-            var updated = await _service.UpdateAsync(id, providerId, dto);
-            if (updated == null) return NotFound();
-
-            return Ok(updated);
+           try
+            {
+                var updated = await _service.UpdateAsync(id, providerId, dto);
+                if (updated == null) return NotFound();
+                return Ok(updated);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
 
         [Authorize]
@@ -71,10 +87,16 @@ namespace SkillSwap.API.Controllers
             if (string.IsNullOrWhiteSpace(providerId))
                 return Unauthorized();
 
-            var ok = await _service.DeleteAsync(id, providerId);
-            if (!ok) return NotFound();
-
-            return NoContent();
+            try
+            {
+                var ok = await _service.DeleteAsync(id, providerId);
+                if (!ok) return NotFound();
+                return NoContent();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
         }
     }
 }

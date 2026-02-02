@@ -1,0 +1,10 @@
+﻿@typeparam TId
+<button class="skill-chip @ExtraClass" @onclick="OnClick">
+    @Display
+</button>
+
+@code {
+    [Parameter] public string Display { get; set; } = string.Empty;
+    [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public string ExtraClass { get; set; } = "";
+}

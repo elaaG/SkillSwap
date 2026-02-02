@@ -1,0 +1,283 @@
+﻿@inject NavigationManager Navigation
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+
+<div class="listing-card @(IsMatch ? "is-match" : "")"
+     @onclick="@(() => Navigation.NavigateTo("/listings/{Listing.Id}"))">
+    
+    @if(IsMatch)
+    {
+        <div class="match-badge">
+            <svg style="width: 14px; height: 14px; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            Matched
+        </div>
+    }
+
+    <div class="listing-header">
+        <h3 class="listing-title">
+            @Listing.Title
+        </h3>
+        <span class="status-badge status-@Listing.Status.ToLower()">
+            @Listing.Status
+        </span>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Listing.Description))
+    {
+        <p class="listing-description">@TruncateText(Listing.Description, 120)</p>
+    }
+
+    <div class="listing-meta">
+        <div class="meta-item">
+            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+            <span>@Listing.CreditsPerHour credit@(Listing.CreditsPerHour != 1 ? "s" : "")/hr</span>
+        </div>
+        <div class="meta-item">
+            <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+            </svg>
+            <span>@Listing.CreatedAt.ToString("MMM dd, yyyy")</span>
+        </div>
+    </div>
+
+    @if(Listing.Skills != null && Listing.Skills.Any())
+    {
+        <div class="skills-section">
+            <div class="skill-chips">
+                @foreach(var skill in Listing.Skills.Take(3))
+                {
+                    <span class="skill-chip">
+                        @skill.SkillName
+                        @if (!string.IsNullOrWhiteSpace(skill.ProficiencyLevel))
+                        {
+                            <span class="skill-level">• @skill.ProficiencyLevel</span>
+                        }
+                    </span>
+                }
+                @if(Listing.Skills.Count > 3)
+                {
+                    <span class="skill-chip more">+@(Listing.Skills.Count - 3) more</span>
+                }
+            </div>
+        </div>
+    }
+
+    @if(Listing.ListingAvailabilities != null && Listing.ListingAvailabilities.Any())
+    {
+        <div class="availability-info">
+            <svg style="width: 14px; height: 14px; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+            </svg>
+            @Listing.ListingAvailabilities.Count time slot@(Listing.ListingAvailabilities.Count != 1 ? "s" : "") available
+        </div>
+    }
+
+    <div class="card-footer">
+        <button class="btn-view" @onclick:stopPropagation="true" @onclick="@(() => Navigation.NavigateTo($"/listings/{Listing.Id}"))">
+            View Details
+            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<style>
+    .listing-card {
+        background: white;
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-5);
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-4);
+        height: 100%;
+    }
+
+    .listing-card:hover {
+        border-color: var(--primary-300);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .listing-card.is-match {
+        border-color: var(--primary-400);
+        background: linear-gradient(to bottom, var(--primary-50), white);
+    }
+
+    .listing-card.is-match:hover {
+        border-color: var(--primary-500);
+    }
+
+    .match-badge {
+        position: absolute;
+        top: var(--spacing-4);
+        right: var(--spacing-4);
+        display: flex;
+        align-items: center;
+        padding: 4px 10px;
+        background: var(--primary-600);
+        color: white;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .listing-header {
+        display: flex;
+        align-items: start;
+        justify-content: space-between;
+        gap: var(--spacing-3);
+        padding-right: var(--spacing-10);
+    }
+
+    .listing-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0;
+        line-height: 1.4;
+        flex: 1;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .status-active {
+        background: var(--success-100);
+        color: var(--success-800);
+    }
+
+    .status-paused {
+        background: var(--warning-100);
+        color: var(--warning-800);
+    }
+
+    .status-archived {
+        background: var(--gray-100);
+        color: var(--gray-800);
+    }
+
+    .listing-description {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    .listing-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-4);
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+    }
+
+    .meta-item svg {
+        color: var(--gray-400);
+    }
+
+    .skills-section {
+        padding-top: var(--spacing-2);
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .skill-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-2);
+    }
+
+    .skill-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        background: var(--gray-100);
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .skill-chip.more {
+        background: var(--primary-100);
+        color: var(--primary-700);
+    }
+
+    .skill-level {
+        font-weight: 400;
+        opacity: 0.8;
+        margin-left: 2px;
+    }
+
+    .availability-info {
+        display: flex;
+        align-items: center;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        padding: var(--spacing-2) var(--spacing-3);
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+    }
+
+    .card-footer {
+        margin-top: auto;
+        padding-top: var(--spacing-3);
+        border-top: 1px solid var(--gray-100);
+    }
+
+    .btn-view {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-2);
+        width: 100%;
+        padding: var(--spacing-3);
+        background: var(--primary-600);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .btn-view:hover {
+        background: var(--primary-700);
+    }
+</style>
+
+@code {
+    [Parameter] public Listing Listing { get; set; } = null!;
+    [Parameter] public bool IsMatch { get; set; } = false;
+
+
+    private string TruncateText(string text, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        if (text.Length <= maxLength) return text;
+        return text.Substring(0, maxLength).TrimEnd() + "...";
+    }
+}
