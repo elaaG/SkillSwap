@@ -1,0 +1,479 @@
+﻿@page "/listings/create"
+@attribute [Authorize]
+@inject IListingService ListingService
+@inject ISkillService SkillService
+@inject NavigationManager Nav
+@inject LocalSkillStore LocalStore
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+
+
+<div class="container page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Create New Listing</h1>
+            <p class="page-subtitle">Share your skills and start teaching</p>
+        </div>
+    </div>
+
+    @if(allSkills == null)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading form...</p>
+        </div>
+    }
+    else
+    {
+        <div class="form-container">
+            <EditForm Model="model" OnValidSubmit="HandleCreate">
+                <DataAnnotationsValidator />
+
+                <div class="form-sections">
+                    <!-- Basic Information -->
+                    <div class="form-section">
+                        <h3 class="section-title">Basic Information</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label required">Title</label>
+                            <InputText @bind-Value="model.Title" 
+                                     class="form-control" 
+                                     placeholder="e.g., Learn Python Programming from Scratch" />
+                            <ValidationMessage For="@(() => model.Title)" class="validation-message" />
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <InputTextArea @bind-Value="model.Description" 
+                                         class="form-control" 
+                                         placeholder="Describe what you'll teach, your teaching style, and what students will learn..."
+                                         rows="5" />
+                            <small class="form-help">Give potential students a clear idea of what to expect</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label required">Credits per Hour</label>
+                            <InputNumber TValue="int" @bind-Value="model.CreditsPerHour" class="form-control" min="1" />
+                            <small class="form-help">How many time credits will students pay per hour?</small>
+                        </div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div class="form-section">
+                        <h3 class="section-title">Skills</h3>
+                        <p class="section-description">Select the skills you'll teach in this listing</p>
+                        
+                        @foreach(var skill in model.Skills)
+                        {
+                            <div class="skill-row">
+                                <div class="skill-select">
+                                    <label class="form-label">Skill</label>
+                                    <select @bind="skill.SkillId" class="form-control">
+                                        <option value="0">Select a skill</option>
+                                        @foreach(var sk in allSkills)
+                                        {
+                                            <option value="@sk.Id">@sk.Name</option>
+                                        }
+                                    </select>
+                                </div>
+
+                                <div class="skill-level">
+                                    <label class="form-label">Your Level</label>
+                                    <select @bind="skill.ProficiencyLevel" class="form-control">
+                                        <option value="">Not specified</option>
+                                        <option value="Beginner">Beginner</option>
+                                        <option value="Intermediate">Intermediate</option>
+                                        <option value="Advanced">Advanced</option>
+                                        <option value="Expert">Expert</option>
+                                    </select>
+                                </div>
+
+                                <div class="skill-actions">
+                                    <button type="button" 
+                                            class="btn-icon btn-danger" 
+                                            @onclick="() => RemoveSkill(skill)"
+                                            title="Remove skill">
+                                        <svg style="width: 18px; height: 18px;" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <button type="button" class="btn btn-outline" @onclick="AddSkillSlot">
+                            <svg style="width: 18px; height: 18px; margin-right: 6px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Add Another Skill
+                        </button>
+                    </div>
+
+                    <!-- Availability -->
+                    <div class="form-section">
+                        <h3 class="section-title">Availability</h3>
+                        <p class="section-description">When are you available to teach?</p>
+                        
+                        @foreach(var slot in model.ListingAvailabilities)
+                        {
+                            <div class="availability-row">
+                                <div class="availability-time">
+                                    <label class="form-label">Start Time</label>
+                                    <InputDate Type="InputDateType.DateTimeLocal" 
+                                             @bind-Value="slot.StartTime" 
+                                             class="form-control" />
+                                </div>
+
+                                <div class="availability-time">
+                                    <label class="form-label">End Time</label>
+                                    <InputDate Type="InputDateType.DateTimeLocal" 
+                                             @bind-Value="slot.EndTime" 
+                                             class="form-control" />
+                                </div>
+
+                                <div class="availability-actions">
+                                    <button type="button" 
+                                            class="btn-icon btn-danger" 
+                                            @onclick="() => RemoveAvailability(slot)"
+                                            title="Remove time slot">
+                                        <svg style="width: 18px; height: 18px;" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <button type="button" class="btn btn-outline" @onclick="AddAvailability">
+                            <svg style="width: 18px; height: 18px; margin-right: 6px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Add Time Slot
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-lg" disabled="@isSubmitting">
+                        @if(isSubmitting)
+                        {
+                            <div class="btn-spinner"></div>
+                            <span>Creating Listing...</span>
+                        }
+                        else
+                        {
+                            <svg style="width: 18px; height: 18px; margin-right: 6px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Create Listing</span>
+                        }
+                    </button>
+                    <button type="button" 
+                            class="btn btn-outline btn-lg" 
+                            @onclick="Cancel"
+                            disabled="@isSubmitting">
+                        Cancel
+                    </button>
+                </div>
+
+                @if(!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        <svg style="width: 20px; height: 20px; margin-right: 8px;" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        @errorMessage
+                    </div>
+                }
+            </EditForm>
+        </div>
+    }
+</div>
+
+<style>
+    .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .form-sections {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-8);
+        margin-bottom: var(--spacing-6);
+    }
+
+    .form-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-6);
+    }
+
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin: 0 0 var(--spacing-2) 0;
+    }
+
+    .section-description {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin: 0 0 var(--spacing-5) 0;
+    }
+
+    .form-group {
+        margin-bottom: var(--spacing-5);
+    }
+
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: var(--spacing-2);
+    }
+
+    .form-label.required::after {
+        content: " *";
+        color: var(--error-600);
+    }
+
+    .form-help {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin-top: var(--spacing-2);
+    }
+
+    .skill-row,
+    .availability-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: var(--spacing-3);
+        align-items: end;
+        margin-bottom: var(--spacing-3);
+        padding: var(--spacing-4);
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+    }
+
+    @@media (max-width: 640px) {
+        .skill-row,
+        .availability-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .skill-actions,
+        .availability-actions {
+            justify-self: end;
+        }
+    }
+
+    .btn-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: 1px solid currentColor;
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-icon.btn-danger {
+        color: var(--error-600);
+        background: white;
+    }
+
+    .btn-icon.btn-danger:hover {
+        background: var(--error-50);
+        border-color: var(--error-700);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: var(--spacing-3);
+        justify-content: flex-start;
+        padding: var(--spacing-6);
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+    }
+
+    @@media (max-width: 640px) {
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+
+    .btn-spinner {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    .alert {
+        display: flex;
+        align-items: center;
+        padding: var(--spacing-4);
+        border-radius: var(--radius-lg);
+        margin-top: var(--spacing-4);
+    }
+
+    .alert-danger {
+        background: var(--error-50);
+        color: var(--error-800);
+        border: 1px solid var(--error-200);
+    }
+
+    .validation-message {
+        color: var(--error-600);
+        font-size: 0.75rem;
+        margin-top: var(--spacing-1);
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: var(--spacing-12);
+    }
+
+    .spinner {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto var(--spacing-4);
+        border: 4px solid var(--gray-200);
+        border-top-color: var(--primary-600);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private ListingCreateDto model = new ListingCreateDto
+    {
+        Skills = new List<ListingSkillUpsertDto> { new ListingSkillUpsertDto() },
+        ListingAvailabilities = new List<ListingAvailabilityUpsertDto>
+        {
+            new ListingAvailabilityUpsertDto
+            {
+                StartTime =  DateTime.Now.AddDays(1).Date.AddHours(9), 
+                EndTime = DateTime.Now.AddDays(1).Date.AddHours(10) 
+            }
+        }
+    };
+    private List<Skill> allSkills = new();
+    private string? errorMessage;
+    private bool isSubmitting = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await SkillService.GetAllSkillsAsync();
+        if (result.Success && result.Data != null)
+        {
+            allSkills = result.Data;
+        }
+        else
+        {
+            allSkills = new List<Skill>();
+        }
+    }
+
+    private void AddSkillSlot() => 
+        model.Skills.Add(new ListingSkillUpsertDto());
+
+    private void RemoveSkill(ListingSkillUpsertDto skill)
+    {
+        if (model.Skills.Count > 1)
+        {
+            model.Skills.Remove(skill);
+        }
+    }
+
+    private void AddAvailability()
+    {
+        var lastSlot = model.ListingAvailabilities.LastOrDefault();
+        var newStart = lastSlot?.EndTime.AddHours(1) ?? DateTime.Now.AddDays(1).Date.AddHours(9);
+        var newEnd = newStart.AddHours(1);
+
+        model.ListingAvailabilities.Add(new ListingAvailabilityUpsertDto 
+        { 
+            StartTime = newStart,
+            EndTime = newEnd
+        });
+    }
+    private void RemoveAvailability(ListingAvailabilityUpsertDto slot)
+    {
+        if (model.ListingAvailabilities.Count > 1)
+        {
+            model.ListingAvailabilities.Remove(slot);
+        }
+    }
+
+    private async Task HandleCreate()
+    {
+        errorMessage = null;
+        // basic validation
+        if (model.Skills.All(s => s.SkillId == 0))
+        {
+            errorMessage = "Please select at least one skill.";
+            return;
+        }
+
+
+        foreach(var a in model.ListingAvailabilities)
+        {
+            if (a.EndTime <= a.StartTime)
+            {
+                errorMessage = "End time must be after start time for all availability slots.";
+                return;
+            }
+        }
+        isSubmitting = true;
+        StateHasChanged();
+        try
+        {
+            var resp = await ListingService.CreateListingAsync(model);
+            if (resp.Success)
+            {
+                Nav.NavigateTo("/listings");
+            }
+            else
+            {
+                errorMessage = resp.ErrorMessage ?? "Failed to create listing. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+    private void Cancel()
+    {
+        Nav.NavigateTo("/listings");
+    }
+}

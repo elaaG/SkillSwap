@@ -1,0 +1,293 @@
+﻿@page "/listings"
+@inject IListingService ListingService
+@inject ISkillService SkillService
+@inject LocalSkillStore LocalStore
+@inject NavigationManager Navigation
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+
+<div class="container page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Browse Listings</h1>
+            <p class="page-subtitle">Find tutors and teaching opportunities</p>
+        </div>
+        <a href="/listings/create" class="btn btn-primary">
+            <svg style="width: 18px; height: 18px; margin-right: 6px;" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+            </svg>
+            Create Listing
+        </a>
+    </div>
+
+    <div class="filters-card">
+        <div class="filter-group">
+            <label>Search</label>
+            <input type="text" 
+                   class="form-control" 
+                   placeholder="Search by title or description..." 
+                   @bind="search" 
+                   @bind:event="oninput"
+                   @onkeyup="HandleSearchKeyUp" />
+        </div>
+        <div class="filter-group">
+            <label>Skill</label>
+            <select class="form-control" @bind="filterSkillId" @bind:after="ApplyFilters">
+                <option value="0">All skills</option>
+                @foreach (var s in allSkills)
+                {
+                    <option value="@s.Id">@s.Name</option>
+                }
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-outline" @onclick="ClearFilters">
+                <svg style="width: 16px; height: 16px; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+                Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Results -->
+    @if(listings == null)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading listings...</p>
+        </div>
+    }
+    else if(!filtered.Any())
+    {
+        <div class="empty-state">
+            <h3>No listings found</h3>
+            <p>@(HasActiveFilters() ? 
+                   "Try adjusting your filters or search terms." 
+                   : "Be the first to create a listing!"
+               )
+            </p>
+            @if(!HasActiveFilters())
+            {
+                <a href="/listings/create" class="btn btn-primary">Create First Listing</a>
+            }
+        </div>
+
+    }
+    else
+    {
+        <div class="results-header">
+            <p class="results-count">
+                <strong>@filtered.Count</strong> @(filtered.Count == 1 ? "listing" : "listings") found
+                @if(matchedListings.Any())
+                {
+                    <span class="match-indicator">• @matchedListings.Count matched to your needs</span>
+                }
+            </p>
+        </div>
+
+        <div class="listings-grid">
+            @foreach(var listing in filtered)
+            {
+                var isMatch = IsMatchForUser(listing);
+                <ListingCard Listing="listing" IsMatch="isMatch" />
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .filters-card {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-xl);
+        padding: var(--spacing-5);
+        margin-bottom: var(--spacing-6);
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: var(--spacing-4);
+        align-items: end;
+    }
+
+    @@media (max-width: 768px) {
+        .filters-card {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .filter-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: var(--spacing-2);
+    }
+
+    .results-header {
+        margin-bottom: var(--spacing-4);
+    }
+
+    .results-count {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin: 0;
+    }
+
+    .match-indicator {
+        color: var(--primary-600);
+        font-weight: 600;
+    }
+
+    .listings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: var(--spacing-5);
+    }
+
+    @@media (max-width: 640px) {
+        .listings-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .loading-state,
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-12) var(--spacing-6);
+    }
+
+    .spinner {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto var(--spacing-4);
+        border: 4px solid var(--gray-200);
+        border-top-color: var(--primary-600);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .empty-icon {
+        font-size: 5rem;
+        margin-bottom: var(--spacing-4);
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 var(--spacing-2) 0;
+        color: var(--gray-900);
+    }
+
+    .empty-state p {
+        font-size: 1rem;
+        color: var(--gray-600);
+        margin: 0 0 var(--spacing-5) 0;
+    }
+</style>
+
+@code {
+    private List<Listing>? listings;
+    private List<Listing> filtered = new();
+    private List<Listing> matchedListings = new();
+    private List<Skill> allSkills = new();
+    private string? search;
+    private int filterSkillId = 0;
+    private HashSet<int> userNeeds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        // Load skills
+        var sres = await SkillService.GetAllSkillsAsync();
+        if (sres.Success && sres.Data != null)
+        {
+            allSkills = sres.Data;
+        }
+
+        // Load listings
+        var lres = await ListingService.GetAllListingsAsync();
+        if (lres.Success && lres.Data != null)
+        {
+            listings = lres.Data;
+        }
+        else
+        {
+            listings = new List<Listing>();
+        }
+
+        // Load user preferences
+        var needs = await LocalStore.GetNeedAsync();
+        userNeeds = new HashSet<int>(needs);
+
+        ApplyFilters();
+    }
+    
+    private void HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            ApplyFilters();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (listings == null)
+        {
+            filtered = new List<Listing>();
+            matchedListings = new List<Listing>();
+            return;
+        }
+        var q = listings.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var searchTerm = search.Trim().ToLower();
+            q = q.Where(l =>
+                (l.Title ?? "").ToLower().Contains(searchTerm)
+                || (l.Description ?? "").ToLower().Contains(searchTerm)
+            );
+        }
+        if (filterSkillId > 0)
+        {
+            q = q.Where(l =>
+                l.Skills.Any(s => s.SkillId == filterSkillId));
+        }
+        filtered = q.OrderByDescending(l => l.CreatedAt).ToList();
+        matchedListings = filtered.Where(IsMatchForUser).ToList();
+        StateHasChanged();
+    }
+    private void ClearFilters()
+    {
+        search = null;
+        filterSkillId = 0;
+        ApplyFilters();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrWhiteSpace(search) || filterSkillId > 0;
+    }
+    private bool IsMatchForUser(Listing l)
+    {
+        if (userNeeds == null || userNeeds.Count == 0) return false;
+        return l.Skills.Any(s => userNeeds.Contains(s.SkillId));
+    }
+}

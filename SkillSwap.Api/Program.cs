@@ -8,11 +8,16 @@ using SkillSwap.API.Middleware;
 using SkillSwap.API.Models;
 using SkillSwap.API.Services.Implementations;
 using SkillSwap.API.Services.Interfaces;
+using System.Text.Json.Serialization;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
@@ -105,7 +110,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowBlazorClient", policy =>
     {
         policy.WithOrigins(
-            "http://localhost:5002",  
+            "http://localhost:5002", 
+            "https://localhost:7002",
             "http://localhost:5203"   
         )
         .AllowAnyHeader()
@@ -117,6 +123,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IListingService, ListingService>();
 
 var app = builder.Build();
 

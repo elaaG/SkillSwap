@@ -38,5 +38,8 @@ namespace SkillSwap.API.Models
         // Navigation properties
         [ForeignKey("UserId")]
         public virtual ApplicationUser User { get; set; } = null!;
+        [ForeignKey(nameof(SkillId))]
+        public virtual Skill Skill { get; set; } = null!;
+
     }
 }

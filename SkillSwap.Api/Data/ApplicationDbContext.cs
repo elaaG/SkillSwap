@@ -10,10 +10,13 @@ namespace SkillSwap.API.Data
             : base(options)
         {
         }
-        
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<TransactionLog> TransactionLogs { get; set; }
         public DbSet<UserSkill> UserSkills { get; set; }
+        public DbSet<Skill> Skills { get; set; }
+        public DbSet<Listing> Listings { get; set; }
+        public DbSet<ListingSkill> ListingSkills { get; set; }
+        public DbSet<ListingAvailability> ListingAvailabilities { get; set; }
         
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -84,10 +87,19 @@ namespace SkillSwap.API.Data
                 entity.HasIndex(e => e.UserId)
                       .HasDatabaseName("IX_UserSkills_UserId");
                 
+                entity.HasIndex(e => e.SkillId)
+                      .HasDatabaseName("IX_UserSkills_SkillId");
+                
                 entity.HasOne(us => us.User)
                       .WithMany(u => u.UserSkills)
                       .HasForeignKey(us => us.UserId)
                       .OnDelete(DeleteBehavior.Cascade);
+                
+                entity.HasOne(us => us.Skill)
+                      .WithMany(u => u.UserSkills)
+                      .HasForeignKey(us => us.SkillId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
                 
                 entity.Property(us => us.SkillType)
                       .HasConversion<string>();
@@ -110,6 +122,98 @@ namespace SkillSwap.API.Data
                 
                 entity.Property(u => u.AverageRating)
                       .HasPrecision(3, 2);
+            });
+            
+            builder.Entity<Skill>(entity =>
+            {
+                  entity.ToTable("Skills");
+
+                  entity.Property(s => s.Name)
+                        .IsRequired()
+                        .HasMaxLength(80);
+
+                  entity.Property(s => s.Description)
+                        .HasMaxLength(200);
+
+                  entity.HasIndex(s => s.Name)
+                        .IsUnique()
+                        .HasDatabaseName("IX_Skills_Name_Unique");
+            });
+            
+            builder.Entity<Listing>(entity =>
+            {
+                  entity.ToTable("Listings");
+
+                  entity.Property(l => l.Title)
+                        .IsRequired()
+                        .HasMaxLength(120);
+
+                  entity.Property(l => l.Description)
+                        .HasMaxLength(800);
+
+                  entity.Property(l => l.CreditsPerHour)
+                        .IsRequired();
+
+                  entity.Property(l => l.Status)
+                        .HasConversion<string>();
+
+                  entity.HasIndex(l => l.ProviderId)
+                        .HasDatabaseName("IX_Listings_ProviderId");
+
+                  entity.HasIndex(l => l.Status)
+                        .HasDatabaseName("IX_Listings_Status");
+
+                    entity.HasIndex(l => l.CreatedAt)
+                          .HasDatabaseName("IX_Listings_CreatedAt");
+
+                    entity.HasOne(l => l.Provider)
+                          .WithMany() 
+                          .HasForeignKey(l => l.ProviderId)
+                          .OnDelete(DeleteBehavior.Cascade);
+            });
+            
+            builder.Entity<ListingSkill>(entity =>
+            {
+                  entity.ToTable("ListingSkills");
+
+              entity.HasIndex(ls => new { ls.ListingId, ls.SkillId })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ListingSkills_Unique");
+
+              entity.HasIndex(ls => ls.SkillId)
+                    .HasDatabaseName("IX_ListingSkills_SkillId");
+
+              entity.HasOne(ls => ls.Listing)
+                    .WithMany(l => l.ListingSkills)
+                    .HasForeignKey(ls => ls.ListingId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+              entity.HasOne(ls => ls.Skill)
+                    .WithMany()
+                    .HasForeignKey(ls => ls.SkillId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                    entity.Property(ls => ls.ProficiencyLevel)
+                          .HasConversion<string>();
+            });
+            
+            builder.Entity<ListingAvailability>(entity =>
+            {
+                  entity.ToTable("ListingAvailabilities");
+
+                    entity.HasIndex(a => a.ListingId)
+                          .HasDatabaseName("IX_ListingAvailabilities_ListingId");
+
+                    entity.HasIndex(a => a.StartTime)
+                          .HasDatabaseName("IX_ListingAvailabilities_StartTime");
+
+                    entity.HasIndex(a => a.EndTime)
+                          .HasDatabaseName("IX_ListingAvailabilities_EndTime");
+
+                    entity.HasOne(a => a.Listing)
+                          .WithMany(l => l.ListingAvailabilities)
+                          .HasForeignKey(a => a.ListingId)
+                          .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

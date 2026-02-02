@@ -1,0 +1,694 @@
+﻿@page "/skills"
+@attribute [Authorize]
+@inject ISkillService SkillService
+@inject LocalSkillStore LocalStore
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+
+<div class="container page-container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Skills</h1>
+            <p class="page-subtitle">Manage your skills and learning preferences</p>
+        </div>
+    </div>
+
+<div class="skills-layout">
+    <!-- Left Column: All Skills List -->
+    <div class="skills-main">
+        <div class="card">
+            <div class="card-header">
+                <h3>All Available Skills</h3>
+                <span class="badge">@(allSkills?.Count ?? 0) skills</span>
+            </div>
+                    
+            <div class="card-body">
+                @if (allSkills == null)
+                {
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading skills...</p>
+                    </div>
+
+                }
+                else if(!allSkills.Any())
+                {
+                    <div class="empty-state">
+                        <h4>No skills yet</h4>
+                        <p>Be the first to add a skill to the platform!</p>
+                    </div>
+                }
+
+                else {
+                    <div class="skill-list">
+                        @foreach(var s in allSkills)
+                        {
+                        <div class="skill-item">
+                            <div class="skill-info">
+                                <h4 class="skill-name">@s.Name</h4>
+                                @if (!string.IsNullOrWhiteSpace(s.Description))
+                                {
+                                    <p class="skill-description">@s.Description</p>
+                                }
+                            </div>
+
+
+                            <div class="skill-actions">
+                                <button class="btn-toggle @(teachSet.Contains(s.Id) ? "active" : "")"
+                                        @onclick="() => ToggleTeach(s.Id)">
+                                    <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+                                    </svg>
+                                    Teach
+                                </button>
+                                <button class="btn-toggle @(needSet.Contains(s.Id) ? "active need" : "")"
+                                        @onclick="() => ToggleNeed(s.Id)">
+                                    <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Learn
+                                </button>
+                            </div>
+                        </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Add Skill & Preferences -->
+    <div class="skills-sidebar">
+    <div class="card">
+        <div class="card-header">
+            <h3>Add New Skill</h3>
+        </div>
+        <div class="card-body">
+            <EditForm Model="newSkill" OnValidSubmit="HandleCreateSkill">
+                <DataAnnotationsValidator/>
+                <div class="form-group">
+                    <label>Skill Name:</label>
+                    <InputText @bind-Value="newSkill.Name" class="form-control" placeholder="e.g., Python Programming"/>
+                    <ValidationMessage For="@(() => newSkill.Name)"/>
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <InputTextArea @bind-Value="newSkill.Description" class="form-control" placeholder="Short description" rows="3"/>
+                </div>
+                <button class="btn btn-primary btn-block" type="submit" disabled="@isCreating">
+                    @if(isCreating)
+                    {
+                        <span>Creating...</span>
+                    }
+                    else
+                    {
+                        <span>Add Skill</span>
+                    }
+                </button>
+                @if (!string.IsNullOrEmpty(createMessage))
+                {
+                    <div class="alert @(createSuccess ? "alert-success" : "alert-danger")">
+                        @createMessage
+                    </div>
+                }
+            </EditForm>
+        </div>
+        </div>
+
+        <hr/>
+
+        <!-- Your Preferences Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Your Preferences</h3>
+                </div>
+                <div class="card-body">
+                    <p class="help-text">
+                        Select skills you can <strong>teach</strong> or want to <strong>learn</strong> 
+                        to get personalized matches.
+                    </p>
+
+                    <div class="preference-section">
+                        <div class="preference-header">
+                            <svg style="width: 20px; height: 20px; color: var(--success-600);" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3z"/>
+                            </svg>
+                            <h5>I Can Teach</h5>
+                            <span class="count-badge">@teachSet.Count</span>
+                        </div>
+                        <div class="chips">
+                            @if(teachSet.Count == 0)
+                            {
+                                <span class="empty-message">No skills selected</span>
+                            }
+                            else
+                            {
+                                @foreach(var id in teachSet)
+                                {
+                                    var s = allSkills?.FirstOrDefault(x => x.Id == id);
+                                    if(s != null)
+                                    {
+                                        <span class="chip chip-teach">
+                                            @s.Name
+                                            <button class="chip-remove" @onclick="() => ToggleTeach(id)">×</button>
+                                        </span>
+                                    }
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <div class="preference-section">
+                        <div class="preference-header">
+                            <svg style="width: 20px; height: 20px; color: var(--primary-600);" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                            </svg>
+                            <h5>I Want to Learn</h5>
+                            <span class="count-badge">@needSet.Count</span>
+                        </div>
+                        <div class="chips">
+                            @if(needSet.Count == 0)
+                            {
+                                <span class="empty-message">No skills selected</span>
+                            }
+                            else
+                            {
+                                @foreach(var id in needSet)
+                                {
+                                    var s = allSkills?.FirstOrDefault(x => x.Id == id);
+                                    if(s != null)
+                                    {
+                                        <span class="chip chip-need">
+                                            @s.Name
+                                            <button class="chip-remove" @onclick="() => ToggleNeed(id)">×</button>
+                                        </span>
+                                    }
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <div class="preference-actions">
+                        <button class="btn btn-primary btn-block" @onclick="SavePreferences" disabled="@isSaving">
+                            @if(isSaving)
+                            {
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <svg style="width: 16px; height: 16px; margin-right: 4px;" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z"/>
+                                </svg>
+                                <span>Save Preferences</span>
+                            }
+                        </button>
+                        @if(teachSet.Count > 0 || needSet.Count > 0)
+                        {
+                            <button class="btn btn-outline btn-block" @onclick="ClearPreferences">
+                                Clear All
+                            </button>
+                        }
+                    </div>
+
+                    @if(!string.IsNullOrEmpty(saveMessage))
+                    {
+                        <div class="alert alert-success">
+                            @saveMessage
+                        </div>
+                    }
+
+                    <p class="help-text-small">
+                        Preferences are stored locally in your browser
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .skills-layout {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        gap: var(--spacing-6);
+        margin-top: var(--spacing-6);
+    }
+
+    @@media (max-width: 1024px) {
+        .skills-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .skills-main {
+        min-width: 0;
+    }
+
+    .skills-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-6);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-5);
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .card-header h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        margin: 0;
+        color: var(--gray-900);
+    }
+
+    .badge {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        padding: 4px 12px;
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .skill-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-3);
+    }
+
+    .skill-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--spacing-4);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .skill-item:hover {
+        border-color: var(--gray-300);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .skill-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .skill-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0 0 4px 0;
+    }
+
+    .skill-description {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .skill-actions {
+        display: flex;
+        gap: var(--spacing-2);
+        flex-shrink: 0;
+    }
+
+    .btn-toggle {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 6px 12px;
+        border: 1.5px solid var(--gray-300);
+        background: white;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-toggle:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+
+    .btn-toggle.active.teach {
+        background: var(--success-50);
+        border-color: var(--success-500);
+        color: var(--success-700);
+    }
+
+    .btn-toggle.active.need {
+        background: var(--primary-50);
+        border-color: var(--primary-500);
+        color: var(--primary-700);
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: var(--spacing-10);
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto var(--spacing-4);
+        border: 4px solid var(--gray-200);
+        border-top-color: var(--primary-600);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-10);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: var(--spacing-4);
+    }
+
+    .empty-state h4 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0 0 var(--spacing-2) 0;
+        color: var(--gray-900);
+    }
+
+    .empty-state p {
+        color: var(--gray-600);
+        margin: 0;
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        line-height: 1.5;
+        margin: 0 0 var(--spacing-4) 0;
+    }
+
+    .help-text-small {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+        margin: var(--spacing-3) 0 0 0;
+        text-align: center;
+    }
+
+    .preference-section {
+        margin-bottom: var(--spacing-5);
+    }
+
+    .preference-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+    }
+
+    .preference-header h5 {
+        flex: 1;
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-700);
+        margin: 0;
+    }
+
+    .count-badge {
+        background: var(--gray-100);
+        color: var(--gray-700);
+        padding: 2px 8px;
+        border-radius: var(--radius-full);
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+
+    .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--spacing-2);
+        min-height: 32px;
+    }
+
+    .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: var(--gray-100);
+        border-radius: var(--radius-full);
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+
+    .chip-teach {
+        background: var(--success-100);
+        color: var(--success-800);
+    }
+
+    .chip-need {
+        background: var(--primary-100);
+        color: var(--primary-800);
+    }
+
+    .chip-remove {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        border: none;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        font-size: 1rem;
+        line-height: 1;
+        color: currentColor;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .chip-remove:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    .empty-message {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        font-style: italic;
+    }
+
+    .preference-actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-2);
+        margin-top: var(--spacing-4);
+    }
+
+    .btn-block {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .alert {
+        margin-top: var(--spacing-3);
+        padding: var(--spacing-3);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+    }
+
+    .alert-success {
+        background: var(--success-50);
+        color: var(--success-800);
+        border: 1px solid var(--success-200);
+    }
+
+    .alert-danger {
+        background: var(--error-50);
+        color: var(--error-800);
+        border: 1px solid var(--error-200);
+    }
+</style>
+
+@code {
+    private List<Skill>? allSkills;
+    private Skill newSkill = new();
+    private string? createMessage;
+    private bool createSuccess = false;
+    private bool isCreating = false;
+    private string? saveMessage;
+    private bool isSaving = false;
+
+    private HashSet<int> teachSet = new();
+    private HashSet<int> needSet = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSkills();
+        await LoadPreferences();
+    }
+
+    private async Task LoadSkills()
+    {
+        var res = await SkillService.GetAllSkillsAsync();
+        if (res.Success && res.Data != null)
+        {
+            allSkills = res.Data;
+        }
+        else
+        {
+            allSkills = new List<Skill>();
+        }
+    }
+
+    private async Task LoadPreferences()
+    {
+        var teach = await LocalStore.GetTeachAsync();
+        var need = await LocalStore.GetNeedAsync();
+        teachSet = new HashSet<int>(teach);
+        needSet = new HashSet<int>(need);
+    }
+
+    private async Task HandleCreateSkill()
+    {
+        if (string.IsNullOrWhiteSpace(newSkill.Name))
+        {
+            createMessage = "Skill name is required";
+            createSuccess = false;
+            return;
+        }
+
+        isCreating = true;
+        createMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var resp = await SkillService.CreateSkillAsync(newSkill);
+            if (resp.Success && resp.Data != null)
+            {
+                allSkills!.Insert(0, resp.Data);
+                createMessage = $"✓ Skill '{resp.Data.Name}' created successfully";
+                createSuccess = true;
+                newSkill = new Skill();
+
+                // Clear message after 3 seconds
+                _ = Task.Delay(3000).ContinueWith(_ =>
+                {
+                    createMessage = null;
+                    StateHasChanged();
+                });
+            }
+            else
+            {
+                createMessage = $"Error: {resp.ErrorMessage}";
+                createSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            createMessage = $"Error: {ex.Message}";
+            createSuccess = false;
+        }
+        finally
+        {
+            isCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleTeach(int id)
+    {
+        if (teachSet.Contains(id))
+        {
+            teachSet.Remove(id);
+        }
+        else
+        {
+            teachSet.Add(id);
+            needSet.Remove(id); // Can't teach and learn the same skill
+        }
+
+        StateHasChanged();
+    }
+
+    private void ToggleNeed(int id)
+    {
+        if (needSet.Contains(id))
+        {
+            needSet.Remove(id);
+        }
+        else
+        {
+            needSet.Add(id);
+            teachSet.Remove(id); // Can't teach and learn the same skill
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SavePreferences()
+    {
+        isSaving = true;
+        saveMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            await LocalStore.SaveTeachAsync(teachSet.ToList());
+            await LocalStore.SaveNeedAsync(needSet.ToList());
+            saveMessage = "✓ Preferences saved successfully";
+
+            // Clear message after 3 seconds
+            _ = Task.Delay(3000).ContinueWith(_ =>
+            {
+                saveMessage = null;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            saveMessage = $"Error saving: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearPreferences()
+    {
+        teachSet.Clear();
+        needSet.Clear();
+        await LocalStore.ClearAsync();
+        saveMessage = "Preferences cleared";
+
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            saveMessage = null;
+            StateHasChanged();
+        });
+
+        StateHasChanged();
+    }
+
+}
