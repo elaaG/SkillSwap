@@ -1,1 +1,11 @@
-{"Version":1,"Hash":"ReTMJ9nsQ06HE0vAYzSHflHpxGgJHGMeF8RskZ4Ok/I=","Source":"SkillSwap.Api","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+{
+  "Version": 1,
+  "Hash": "HUnZp/42i6OdOVb3ApbSPiZFxVtAweyhMQicWu1eB2s=",
+  "Source": "SkillSwap.Api",
+  "BasePath": "_content/SkillSwap.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
