@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\alagu\\Desktop\\SkillSwap\\SkillSwap.Api\\SkillSwap.Api.csproj": {}
+    "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Api\\SkillSwap.Api.csproj": {}
   },
   "projects": {
-    "C:\\Users\\alagu\\Desktop\\SkillSwap\\SkillSwap.Api\\SkillSwap.Api.csproj": {
+    "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Api\\SkillSwap.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\alagu\\Desktop\\SkillSwap\\SkillSwap.Api\\SkillSwap.Api.csproj",
+        "projectUniqueName": "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Api\\SkillSwap.Api.csproj",
         "projectName": "SkillSwap.Api",
-        "projectPath": "C:\\Users\\alagu\\Desktop\\SkillSwap\\SkillSwap.Api\\SkillSwap.Api.csproj",
-        "packagesPath": "C:\\Users\\alagu\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\alagu\\Desktop\\SkillSwap\\SkillSwap.Api\\obj\\",
+        "projectPath": "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Api\\SkillSwap.Api.csproj",
+        "packagesPath": "C:\\Users\\nerim\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Api\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\alagu\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\nerim\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -31,7 +31,11 @@
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
-            "projectReferences": {}
+            "projectReferences": {
+              "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Client\\SkillSwap.Client.csproj": {
+                "projectPath": "C:\\Users\\nerim\\OneDrive\\Bureau\\Projet .NET\\SkillSwap.Client\\SkillSwap.Client.csproj"
+              }
+            }
           }
         },
         "warningProperties": {
