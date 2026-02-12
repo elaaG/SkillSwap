@@ -9,8 +9,8 @@
             <div class="sidebar">
                 <div class="top-row">
                     <a href="/" class="navbar-brand">
-                        <div style="display: flex; align-items: center; gap: var(--spacing-2);">
-                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary-600), var(--primary-800)); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-md);">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #4f46e5, #3730a3); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);">
                                 <span style="font-size: 1.25rem;">🎓</span>
                             </div>
                             <span style="font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;">SkillSwap</span>
@@ -65,6 +65,16 @@
                         </span>
                         <span>Listings</span>
                     </NavLink>
+                    
+                    <NavLink href="/match">
+                        <span class="nav-icon">
+                            <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                        </span>
+                        <span>Discover</span>
+                    </NavLink>
+                    
                     <NavLink href="/my-bookings">
                         <span class="nav-icon">
                             <svg style="width: 20px; height: 20px;" fill="currentColor" viewBox="0 0 20 20">
@@ -93,11 +103,11 @@
             <main class="main-content">
                 <div class="top-bar">
                     <div class="container" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: var(--spacing-3);">
-                            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary-600), var(--primary-800)); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #4f46e5, #3730a3); border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
                                 <span style="font-size: 1rem;">@GetPageIcon()</span>
                             </div>
-                            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--gray-900);">
+                            <h2 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #111827;">
                                 @GetPageTitle()
                             </h2>
                         </div>
@@ -131,6 +141,7 @@
             "" => "Dashboard",
             "profile" => "My Profile",
             "wallet" => "My Wallet",
+            "match" => "Discover Matches",
             _ => "SkillSwap"
         };
     }
@@ -143,6 +154,7 @@
             "" => "🏠",
             "profile" => "👤",
             "wallet" => "💳",
+            "match" => "⭐",
             _ => "🎓"
         };
     }

@@ -37,6 +37,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IListingService, ListingService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IMatchService, MatchService>();
 builder.Services.AddScoped<LocalSkillStore>();   // local skill storage (teaches/needs)
 
 await builder.Build().RunAsync();

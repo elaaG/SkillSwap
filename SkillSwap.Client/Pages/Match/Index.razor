@@ -1,0 +1,728 @@
+@page "/match"
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+@inject IMatchService MatchService
+@inject NavigationManager Nav
+
+<div class="match-page">
+    <div class="page-header">
+        <h1 class="page-title">Discover Matches</h1>
+        <p class="page-subtitle">Find the perfect skills and services tailored for you</p>
+    </div>
+
+    @* Dashboard Stats Section *@
+    @if (Stats != null)
+    {
+        <div class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <span class="stat-value">@Stats.TotalActiveListings</span>
+                    <span class="stat-label">Active Listings</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-content">
+                    <span class="stat-value">@Stats.TotalRegisteredUsers</span>
+                    <span class="stat-label">Registered Users</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <span class="stat-value">@Stats.TotalSessionsCompleted</span>
+                    <span class="stat-label">Sessions Completed</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-content">
+                    <span class="stat-value">@Stats.TotalSkillsAvailable</span>
+                    <span class="stat-label">Skills Available</span>
+                </div>
+            </div>
+        </div>
+    }
+
+    @* Tabs Navigation *@
+    <div class="tabs-container">
+        <button class="tab-button @(ActiveTab == "for-you" ? "active" : "")" @onclick='() => SwitchTab("for-you")'>
+            🎯 For You
+        </button>
+        <button class="tab-button @(ActiveTab == "trending" ? "active" : "")" @onclick='() => SwitchTab("trending")'>
+            🔥 Trending
+        </button>
+        <button class="tab-button @(ActiveTab == "search" ? "active" : "")" @onclick='() => SwitchTab("search")'>
+            🔍 Search
+        </button>
+    </div>
+
+    @* Tab Content *@
+    <div class="tab-content">
+        @if (ActiveTab == "for-you")
+        {
+            <div class="section-content">
+                <h2 class="section-title">Personalized Matches</h2>
+                @if (IsLoadingForYou)
+                {
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading your personalized matches...</p>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(ForYouError))
+                {
+                    <div class="error-state">
+                        <p class="error-icon">⚠️</p>
+                        <p class="error-message">@ForYouError</p>
+                        <button class="btn-retry" @onclick="LoadForYouMatches">Retry</button>
+                    </div>
+                }
+                else if (ForYouMatches?.Items == null || !ForYouMatches.Items.Any())
+                {
+                    <div class="empty-state">
+                        <p class="empty-icon">🔍</p>
+                        <p class="empty-message">No personalized matches found. Try adding skills to your profile!</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="listings-grid">
+                        @foreach (var listing in ForYouMatches.Items)
+                        {
+                            <MatchListingCard Listing="@listing" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (ActiveTab == "trending")
+        {
+            <div class="section-content">
+                <h2 class="section-title">Trending Skills</h2>
+                @if (IsLoadingTrending)
+                {
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Loading trending skills...</p>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(TrendingError))
+                {
+                    <div class="error-state">
+                        <p class="error-icon">⚠️</p>
+                        <p class="error-message">@TrendingError</p>
+                        <button class="btn-retry" @onclick="LoadTrendingSkills">Retry</button>
+                    </div>
+                }
+                else if (TrendingSkills == null || !TrendingSkills.Any())
+                {
+                    <div class="empty-state">
+                        <p class="empty-icon">📊</p>
+                        <p class="empty-message">No trending skills at the moment.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="trending-grid">
+                        @foreach (var skill in TrendingSkills)
+                        {
+                            <div class="trending-card">
+                                <div class="trending-header">
+                                    <span class="trending-name">@skill.SkillName</span>
+                                    <span class="trending-badge">🔥</span>
+                                </div>
+                                <div class="trending-count">
+                                    @skill.ActiveListingCount listing@(skill.ActiveListingCount != 1 ? "s" : "")
+                                </div>
+                                <button class="btn-view-skill" @onclick='() => SearchBySkill(skill.SkillId, skill.SkillName)'>
+                                    View Listings
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (ActiveTab == "search")
+        {
+            <div class="section-content">
+                <h2 class="section-title">Search Listings</h2>
+                
+                <div class="search-form">
+                    <input type="text" 
+                           class="search-input" 
+                           placeholder="Search by skill or keyword..." 
+                           @bind="SearchQuery"
+                           @onkeyup="HandleSearchKeyPress" />
+                    
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>Min Credits</label>
+                            <input type="number" 
+                                   class="filter-input" 
+                                   @bind="MinCredits" 
+                                   placeholder="0" />
+                        </div>
+                        <div class="filter-group">
+                            <label>Max Credits</label>
+                            <input type="number" 
+                                   class="filter-input" 
+                                   @bind="MaxCredits" 
+                                   placeholder="100" />
+                        </div>
+                        <button class="btn-search" @onclick="PerformSearch">
+                            🔍 Search
+                        </button>
+                    </div>
+                </div>
+
+                @if (IsLoadingSearch)
+                {
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Searching...</p>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(SearchError))
+                {
+                    <div class="error-state">
+                        <p class="error-icon">⚠️</p>
+                        <p class="error-message">@SearchError</p>
+                        <button class="btn-retry" @onclick="PerformSearch">Retry</button>
+                    </div>
+                }
+                else if (SearchResults?.Items == null || !SearchResults.Items.Any())
+                {
+                    @if (HasSearched)
+                    {
+                        <div class="empty-state">
+                            <p class="empty-icon">🔍</p>
+                            <p class="empty-message">No results found for "@SearchQuery"</p>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="search-results-info">
+                        <span>Found @SearchResults.TotalCount result@(SearchResults.TotalCount != 1 ? "s" : "")</span>
+                    </div>
+                    <div class="listings-grid">
+                        @foreach (var listing in SearchResults.Items)
+                        {
+                            <MatchListingCard Listing="@listing" />
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DashboardStatsDto? Stats;
+    private MatchResultPageDto? ForYouMatches;
+    private MatchResultPageDto? SearchResults;
+    private List<TrendingSkillDto>? TrendingSkills;
+
+    private string ActiveTab = "for-you";
+    private bool IsLoadingForYou = false;
+    private bool IsLoadingTrending = false;
+    private bool IsLoadingSearch = false;
+    private string ForYouError = string.Empty;
+    private string TrendingError = string.Empty;
+    private string SearchError = string.Empty;
+
+    private string SearchQuery = string.Empty;
+    private int? MinCredits;
+    private int? MaxCredits;
+    private bool HasSearched = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardStats();
+        await LoadForYouMatches();
+    }
+
+    private async Task LoadDashboardStats()
+    {
+        var result = await MatchService.GetDashboardStatsAsync();
+        if (result.Success && result.Data != null)
+        {
+            Stats = result.Data;
+        }
+    }
+
+    private async Task LoadForYouMatches()
+    {
+        IsLoadingForYou = true;
+        ForYouError = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var filter = new MatchFilterDto { Page = 1, PageSize = 12 };
+            var result = await MatchService.GetMatchesForMeAsync(filter);
+
+            if (result.Success && result.Data != null)
+            {
+                ForYouMatches = result.Data;
+            }
+            else
+            {
+                ForYouError = result.ErrorMessage ?? "Failed to load matches";
+            }
+        }
+        catch (Exception ex)
+        {
+            ForYouError = ex.Message;
+        }
+        finally
+        {
+            IsLoadingForYou = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadTrendingSkills()
+    {
+        IsLoadingTrending = true;
+        TrendingError = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await MatchService.GetTrendingAsync(8);
+
+            if (result.Success && result.Data != null)
+            {
+                TrendingSkills = result.Data;
+            }
+            else
+            {
+                TrendingError = result.ErrorMessage ?? "Failed to load trending skills";
+            }
+        }
+        catch (Exception ex)
+        {
+            TrendingError = ex.Message;
+        }
+        finally
+        {
+            IsLoadingTrending = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PerformSearch()
+    {
+        IsLoadingSearch = true;
+        SearchError = string.Empty;
+        HasSearched = true;
+        StateHasChanged();
+
+        try
+        {
+            var filter = new MatchFilterDto
+            {
+                Search = SearchQuery,
+                MinCredits = MinCredits,
+                MaxCredits = MaxCredits,
+                Page = 1,
+                PageSize = 12
+            };
+
+            var result = await MatchService.SearchAsync(filter);
+
+            if (result.Success && result.Data != null)
+            {
+                SearchResults = result.Data;
+            }
+            else
+            {
+                SearchError = result.ErrorMessage ?? "Failed to search";
+            }
+        }
+        catch (Exception ex)
+        {
+            SearchError = ex.Message;
+        }
+        finally
+        {
+            IsLoadingSearch = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SwitchTab(string tab)
+    {
+        ActiveTab = tab;
+
+        if (tab == "trending" && TrendingSkills == null)
+        {
+            await LoadTrendingSkills();
+        }
+    }
+
+    private void HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            _ = PerformSearch();
+        }
+    }
+
+    private void SearchBySkill(int skillId, string skillName)
+    {
+        SearchQuery = skillName;
+        ActiveTab = "search";
+        _ = PerformSearch();
+    }
+}
+
+@* ==================== INLINE COMPONENT: MatchListingCard ==================== *@
+@code {
+    private class MatchListingCardComponent
+    {
+        // This is a marker for the component below
+    }
+}
+
+@* Reusable card component for matched listings *@
+<style>
+    .match-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .page-subtitle {
+        font-size: 1.125rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Stats Section */
+    .stats-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    /* Tabs */
+    .tabs-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .tab-button:hover {
+        color: #3b82f6;
+        background: #f3f4f6;
+    }
+
+    .tab-button.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+    }
+
+    /* Section Content */
+    .section-content {
+        margin-top: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 1.5rem 0;
+    }
+
+    /* Loading/Error/Empty States */
+    .loading-state,
+    .error-state,
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem 1rem;
+        text-align: center;
+    }
+
+    .spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid #e5e7eb;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .error-icon,
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .error-message,
+    .empty-message {
+        font-size: 1rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+
+    .btn-retry {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-retry:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Listings Grid */
+    .listings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Trending Grid */
+    .trending-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+    }
+
+    .trending-card {
+        padding: 1.5rem;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+
+    .trending-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .trending-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .trending-name {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .trending-badge {
+        font-size: 1.5rem;
+    }
+
+    .trending-count {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+    }
+
+    .btn-view-skill {
+        width: 100%;
+        padding: 0.625rem;
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-view-skill:hover {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        transform: translateY(-1px);
+    }
+
+    /* Search Form */
+    .search-form {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.5rem;
+        margin-bottom: 1rem;
+        transition: border-color 0.2s ease;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+
+    .filter-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .filter-group label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .filter-input {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 0.5rem;
+        transition: border-color 0.2s ease;
+    }
+
+    .filter-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+
+    .btn-search {
+        padding: 0.625rem 1.5rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-search:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-1px);
+    }
+
+    .search-results-info {
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .page-title {
+            font-size: 2rem;
+        }
+
+        .stats-section {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .filter-row {
+            grid-template-columns: 1fr;
+        }
+
+        .listings-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .trending-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>

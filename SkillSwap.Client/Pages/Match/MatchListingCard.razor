@@ -1,0 +1,227 @@
+@using SkillSwap.Client.Models
+@inject NavigationManager Nav
+
+<div class="match-listing-card" @onclick="NavigateToListing">
+    <div class="card-header">
+        <h3 class="card-title">@Listing.Title</h3>
+        @if (Listing.IsPersonalMatch)
+        {
+            <span class="match-badge">✨ Match</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Listing.Description))
+    {
+        <p class="card-description">@TruncateDescription(Listing.Description, 100)</p>
+    }
+
+    <div class="card-provider">
+        <span class="provider-icon">👤</span>
+        <span class="provider-name">@Listing.ProviderName</span>
+        @if (Listing.ProviderRating.HasValue && Listing.ProviderRating.Value > 0)
+        {
+            <span class="provider-rating">⭐ @Listing.ProviderRating.Value.ToString("F1")</span>
+        }
+    </div>
+
+    @if (Listing.Skills.Any())
+    {
+        <div class="card-skills">
+            @foreach (var skill in Listing.Skills.Take(3))
+            {
+                <span class="skill-tag">@skill.Name</span>
+            }
+            @if (Listing.Skills.Count > 3)
+            {
+                <span class="skill-tag more">+@(Listing.Skills.Count - 3) more</span>
+            }
+        </div>
+    }
+
+    <div class="card-footer">
+        <div class="card-credits">
+            <span class="credits-icon">💳</span>
+            <span class="credits-value">@Listing.CreditsPerHour</span>
+            <span class="credits-label">credits/hr</span>
+        </div>
+        <button class="btn-view" @onclick="NavigateToListing" @onclick:stopPropagation="true">
+            View Details →
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public MatchedListingDto Listing { get; set; } = null!;
+
+    private void NavigateToListing()
+    {
+        Nav.NavigateTo($"/listings/{Listing.ListingId}");
+    }
+
+    private string TruncateDescription(string description, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(description) || description.Length <= maxLength)
+            return description;
+
+        return description.Substring(0, maxLength) + "...";
+    }
+}
+
+<style>
+    .match-listing-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .match-listing-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-color: #3b82f6;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        flex: 1;
+    }
+
+    .match-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 1rem;
+        white-space: nowrap;
+    }
+
+    .card-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .card-provider {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .provider-icon {
+        font-size: 1rem;
+    }
+
+    .provider-name {
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .provider-rating {
+        color: #6b7280;
+        font-size: 0.8125rem;
+    }
+
+    .card-skills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .skill-tag {
+        display: inline-block;
+        padding: 0.375rem 0.75rem;
+        background: #ede9fe;
+        color: #7c3aed;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 0.375rem;
+    }
+
+    .skill-tag.more {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .card-credits {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .credits-icon {
+        font-size: 1.125rem;
+    }
+
+    .credits-value {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .credits-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    .btn-view {
+        padding: 0.625rem 1.25rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .btn-view:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    @@media (max-width: 640px) {
+        .card-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .btn-view {
+            width: 100%;
+        }
+    }
+</style>
