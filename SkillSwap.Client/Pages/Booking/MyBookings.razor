@@ -45,6 +45,10 @@
     }
     else
     {
+        @* Calculate counts for each section *@
+        var clientBookings = Bookings.Where(b => b.ClientId == CurrentUserId).ToList();
+        var providerBookings = Bookings.Where(b => b.ProviderId == CurrentUserId).ToList();
+
         <div class="stats-bar">
             <div class="stat-card">
                 <span class="stat-label">Total Bookings</span>
@@ -64,12 +68,52 @@
             </div>
         </div>
 
-        <div class="bookings-grid">
-            @foreach (var booking in Bookings)
-            {
-                <BookingCard Booking="@booking" OnActionCompleted="@LoadBookingsAsync" />
-            }
-        </div>
+        @* Section 1: Bookings I Requested (as Client) *@
+        @if (clientBookings.Any())
+        {
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 class="section-title">📤 Bookings I Requested</h2>
+                    <span class="section-count">@clientBookings.Count</span>
+                </div>
+                <div class="bookings-grid">
+                    @foreach (var booking in clientBookings)
+                    {
+                        <BookingCard Booking="@booking" OnActionCompleted="@LoadBookingsAsync" />
+                    }
+                </div>
+            </div>
+        }
+
+        @* Section 2: Bookings On My Listings (as Provider) *@
+        @if (providerBookings.Any())
+        {
+            <div class="section-container">
+                <div class="section-header">
+                    <h2 class="section-title">📥 Bookings On My Listings</h2>
+                    <span class="section-count">@providerBookings.Count</span>
+                </div>
+                <div class="bookings-grid">
+                    @foreach (var booking in providerBookings)
+                    {
+                        <BookingCard Booking="@booking" OnActionCompleted="@LoadBookingsAsync" />
+                    }
+                </div>
+            </div>
+        }
+
+        @* Show empty state if no bookings in either section *@
+        @if (!clientBookings.Any() && !providerBookings.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <h3 class="empty-title">No Bookings Yet</h3>
+                <p class="empty-message">You don't have any bookings at the moment.</p>
+                <a href="/listings" class="btn-browse">
+                    <span>Browse Services</span>
+                </a>
+            </div>
+        }
     }
 </div>
 
@@ -85,7 +129,7 @@
     protected override async Task OnInitializedAsync()
     {
         var auth = await AuthProvider.GetAuthenticationStateAsync();
-        CurrentUserId = auth.User.FindFirst("sub")?.Value;
+        CurrentUserId = auth.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         await LoadBookingsAsync();
     }
     
@@ -327,6 +371,44 @@
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 1.5rem;
+    }
+
+    /* Section Containers */
+    .section-container {
+        margin-bottom: 3rem;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2rem;
+        height: 2rem;
+        padding: 0 0.75rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: white;
+        font-size: 0.875rem;
+        font-weight: 700;
+        border-radius: 1rem;
     }
 
     /* Responsive Design */
