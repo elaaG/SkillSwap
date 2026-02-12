@@ -2,12 +2,10 @@
 @inject IListingService ListingService
 @inject LocalSkillStore LocalStore
 @inject NavigationManager Nav
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
 @using SkillSwap.Client.Models
 @using SkillSwap.Client.Services
-
-@code {
-    [Parameter] public int id { get; set; }
-}
 
 @if (listing == null) { <p>Loading…</p> }
 else
@@ -35,28 +33,89 @@ else
                 <li>@a.StartTime.ToString("f") — @a.EndTime.ToString("f")</li>
             }
         </ul>
+        
+        
+       @* Book a sessio  *@
+        @* <h4>Book a Session</h4> *@
+        @* *@
+        @* @if (!isAuthenticated) *@
+        @* { *@
+        @*     <p class="muted">Please log in to book this session.</p> *@
+        @* } *@
+        @* else if (listing.OwnerId == currentUserId) *@
+        @* { *@
+        @*     <p class="muted">You cannot book your own listing.</p> *@
+        @* } *@
+        @* else *@
+        @* { *@
+        @*     <div class="booking-box"> *@
+        @*         <label>Select a time slot</label> *@
+        @* *@
+        @*         <select @bind="selectedAvailabilityId"> *@
+        @*             <option value="">-- Choose availability --</option> *@
+        @*             @foreach (var a in listing.ListingAvailabilities) *@
+        @*             { *@
+        @*                 <option value="@a.Id"> *@
+        @*                     @a.StartTime.ToString("f") – @a.EndTime.ToString("t") *@
+        @*                 </option> *@
+        @*             } *@
+        @*         </select> *@
+        @* *@
+        @*         <p class="price"> *@
+        @*             💳 @listing.CreditsPerHour credits / hour *@
+        @*         </p> *@
+        @* *@
+        @*         <button class="btn btn-primary" *@
+        @*                 disabled="@(!CanBook)" *@
+        @*                 @onclick="Book"> *@
+        @*             📅 Request Booking *@
+        @*         </button> *@
+        @*     </div> *@
+        @* } *@
+
 
         @if (isMatch)
         {
             <div class="match-explain">
                 <strong>Good match</strong> — this listing matches @matchCount skill(s) from your Needs list.
-                <button class="btn btn-primary" @onclick="Book">Request Booking</button>
+                @* <button class="btn btn-primary" @onclick="Book">Request Booking</button> *@
             </div>
         }
         else
         {
             <button class="btn btn-outline" @onclick="Contact">Contact Provider</button>
         }
+        @if (listing.ProviderId != CurrentUserId)
+        {
+            <button class="btn btn-primary" @onclick="Book">
+                Request Booking
+            </button>
+        }
+        else
+        {
+            <p class="text-muted">
+                👤 This is your listing
+            </p>
+        }
+
+
     </div>
 }
 
+
 @code {
+    [Parameter] public int id { get; set; }
+    private string? CurrentUserId;
     private Listing? listing;
     private bool isMatch = false;
     private int matchCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        CurrentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var r = await ListingService.GetListingByIdAsync(id);
         if (r.Success) listing = r.Data;
 
@@ -69,10 +128,19 @@ else
         }
     }
 
+    // private void Book()
+    // {
+    //     // navigate to booking flow (slice 3) — placeholder
+    //     // Nav.NavigateTo("/book/"+id);
+    //     Nav.NavigateTo($"/book/{listing.Id}");
+    // }
+    
     private void Book()
     {
-        // navigate to booking flow (slice 3) — placeholder
-        Nav.NavigateTo("/book/"+id);
+        if (listing == null) return;
+        Nav.NavigateTo($"/book/{listing.Id}");
     }
+
     private void Contact() { /* open messaging or show provider profile */ }
 }
+

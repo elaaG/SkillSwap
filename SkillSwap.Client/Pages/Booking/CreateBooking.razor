@@ -1,0 +1,90 @@
+@page "/book/{ListingId:int}"
+@* @attribute [Authorize] *@
+
+@inject IListingService ListingService
+@inject IBookingService BookingService
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Nav
+@using SkillSwap.Client.Models
+
+<h1>Book Session</h1>
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (Listing == null)
+{
+    <p>Listing not found.</p>
+}
+else
+{
+    <div class="card">
+        <h3>@Listing.Title</h3>
+        <p>@Listing.Description</p>
+
+        <label>Choose availability</label>
+        <select @bind="SelectedAvailabilityId">
+            <option value="">-- Select time --</option>
+            @foreach (var a in Listing.ListingAvailabilities)
+            {
+                <option value="@a.Id">
+                    @a.StartTime.ToString("f") – @a.EndTime.ToString("t")
+                </option>
+            }
+        </select>
+
+        <p>💳 @Listing.CreditsPerHour credits/hour</p>
+
+        <button class="btn btn-primary"
+                disabled="@(!CanBook)"
+                @onclick="HandleCreateBooking">
+            ✅ Confirm Booking
+        </button>
+    </div>
+}
+
+@code {
+    [Parameter] public int ListingId { get; set; }
+
+    private Listing? Listing;
+    private int? SelectedAvailabilityId;
+    private string? ClientId;
+
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        ClientId = auth.User.FindFirst("sub")?.Value;
+
+        var result = await ListingService.GetListingByIdAsync(ListingId);
+        if (result.Success)
+        {
+            Listing = result.Data;
+        }
+
+        IsLoading = false;
+    }
+
+    private bool CanBook =>
+        SelectedAvailabilityId.HasValue && Listing != null;
+
+    private async Task HandleCreateBooking()
+    {
+        if (!CanBook || Listing == null) return;
+
+        var result = await BookingService.CreateBookingAsync(new CreateBookingDto
+        {
+            ListingId = Listing.Id,
+            ProviderId = Listing.ProviderId,
+            AvailabilityId = SelectedAvailabilityId.Value,
+            Price = Listing.CreditsPerHour
+        });
+
+        if (result.Success)
+        {
+            Nav.NavigateTo("/my-bookings");
+        }
+    }
+}

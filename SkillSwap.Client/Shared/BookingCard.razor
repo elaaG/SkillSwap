@@ -1,0 +1,352 @@
+@* Component: BookingCard - Displays individual booking with actions *@
+@inject AuthenticationStateProvider AuthProvider
+
+<div class="booking-card">
+    <div class="booking-header">
+        <div class="booking-id-section">
+            <span class="booking-label">Booking ID</span>
+            <span class="booking-id">@Booking.BookingId.ToString().Substring(0, 8)...</span>
+        </div>
+        <BookingStatusBadge State="@Booking.State" />
+    </div>
+
+    <div class="booking-body">
+        <div class="escrow-section">
+            <span class="escrow-label">Escrow Status</span>
+            <EscrowStatusBadge Status="@Booking.EscrowStatus" />
+        </div>
+    </div>
+
+<div class="booking-actions">
+    @if (IsPending && IsProvider)
+    {
+        <button class="btn btn-accept"
+                @onclick="OnAcceptAsync"
+                disabled="@IsProcessing">
+            @if (IsProcessing && CurrentAction == "accept")
+            {
+                <span class="spinner"></span>
+                <span>Accepting...</span>
+            }
+            else
+            {
+                <span>✓ Accept</span>
+            }
+        </button>
+
+        <button class="btn btn-reject"
+                @onclick="OnRejectAsync"
+                disabled="@IsProcessing">
+            @if (IsProcessing && CurrentAction == "reject")
+            {
+                <span class="spinner"></span>
+                <span>Rejecting...</span>
+            }
+            else
+            {
+                <span>✕ Reject</span>
+            }
+        </button>
+    }
+    else if (IsPending && IsClient)
+    {
+        <p class="waiting">
+            ⏳ Waiting for provider response
+        </p>
+    }
+    else if (IsAccepted && IsProvider)
+    {
+        <button class="btn btn-complete"
+                @onclick="OnCompleteAsync"
+                disabled="@IsProcessing">
+            @if (IsProcessing && CurrentAction == "complete")
+            {
+                <span class="spinner"></span>
+                <span>Completing...</span>
+            }
+            else
+            {
+                <span>✓ Complete</span>
+            }
+        </button>
+    }
+</div>
+
+
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="error-message">
+            <span class="error-icon">⚠️</span>
+            <span>@ErrorMessage</span>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public BookingDto Booking { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback OnActionCompleted { get; set; }
+
+    [Inject]
+    public IBookingService BookingService { get; set; } = null!;
+
+    private bool IsProcessing { get; set; }
+    private string CurrentAction { get; set; } = string.Empty;
+    private string ErrorMessage { get; set; } = string.Empty;
+	private string? CurrentUserId;
+
+protected override async Task OnInitializedAsync()
+{
+    var auth = await AuthProvider.GetAuthenticationStateAsync();
+    CurrentUserId = auth.User.FindFirst("sub")?.Value;
+}
+private bool IsProvider => Booking.ProviderId == CurrentUserId;
+private bool IsClient => Booking.ClientId == CurrentUserId;
+private bool IsPending => Booking.State == "Pending";
+private bool IsAccepted => Booking.State == "Accepted";
+
+    private async Task OnAcceptAsync()
+    {
+        await ExecuteActionAsync("accept", async () =>
+        {
+            var result = await BookingService.AcceptBookingAsync(Booking.BookingId);
+            if (result.Success)
+            {
+                Booking.State = "Accepted";
+            }
+            return result;
+        });
+    }
+
+    private async Task OnRejectAsync()
+    {
+        await ExecuteActionAsync("reject", async () =>
+        {
+            var result = await BookingService.RejectBookingAsync(Booking.BookingId);
+            if (result.Success)
+            {
+                Booking.State = "Rejected";
+                Booking.EscrowStatus = "Refunded";
+            }
+            return result;
+        });
+    }
+
+    private async Task OnCompleteAsync()
+    {
+        await ExecuteActionAsync("complete", async () =>
+        {
+            var result = await BookingService.CompleteBookingAsync(Booking.BookingId);
+            if (result.Success)
+            {
+                Booking.State = "Completed";
+                Booking.EscrowStatus = "Released";
+            }
+            return result;
+        });
+    }
+
+    private async Task ExecuteActionAsync(string action, Func<Task<ApiResponse<bool>>> apiCall)
+    {
+        IsProcessing = true;
+        CurrentAction = action;
+        ErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await apiCall();
+
+            if (result.Success)
+            {
+                await OnActionCompleted.InvokeAsync();
+            }
+            else
+            {
+                ErrorMessage = result.ErrorMessage ?? "An error occurred";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsProcessing = false;
+            CurrentAction = string.Empty;
+            StateHasChanged();
+        }
+    }
+}
+
+<style>
+    .booking-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        transition: all 0.2s ease;
+        border: 1px solid #e5e7eb;
+    }
+
+    .booking-card:hover {
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+    }
+
+    .booking-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .booking-id-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .booking-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .booking-id {
+        font-family: 'Courier New', monospace;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #111827;
+    }
+
+    .booking-body {
+        margin-bottom: 1.25rem;
+    }
+
+    .escrow-section {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .escrow-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .booking-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        min-height: 2.5rem;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-accept {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+    }
+
+    .btn-accept:hover:not(:disabled) {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-reject {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .btn-reject:hover:not(:disabled) {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+    }
+
+    .btn-complete {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .btn-complete:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .error-message {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 0.5rem;
+        color: #991b1b;
+        font-size: 0.875rem;
+    }
+
+    .error-icon {
+        font-size: 1.125rem;
+    }
+
+    @@media (max-width: 640px) {
+        .booking-card {
+            padding: 1rem;
+        }
+
+        .booking-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+    }
+</style>

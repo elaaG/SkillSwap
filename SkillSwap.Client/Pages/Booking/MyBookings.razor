@@ -1,0 +1,509 @@
+@page "/my-bookings"
+@using SkillSwap.Client.Models
+@using SkillSwap.Client.Services
+@using SkillSwap.Client.Shared
+@* @attribute [Authorize] *@
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthProvider
+
+<AuthorizeView>
+<Authorized>
+    <div class="my-bookings-page">
+    <div class="page-header">
+        <h1 class="page-title">My Bookings</h1>
+        <p class="page-subtitle">Manage your service bookings and transactions</p>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Loading your bookings...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h3 class="error-title">Unable to Load Bookings</h3>
+            <p class="error-message">@ErrorMessage</p>
+            <button class="btn-retry" @onclick="LoadBookingsAsync">
+                <span>🔄 Retry</span>
+            </button>
+        </div>
+    }
+    else if (Bookings == null || !Bookings.Any())
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <h3 class="empty-title">No Bookings Yet</h3>
+            <p class="empty-message">You don't have any bookings at the moment.</p>
+            <a href="/listings" class="btn-browse">
+                <span>Browse Services</span>
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="stats-bar">
+            <div class="stat-card">
+                <span class="stat-label">Total Bookings</span>
+                <span class="stat-value">@Bookings.Count</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Pending</span>
+                <span class="stat-value stat-pending">@Bookings.Count(b => b.State == "Pending")</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Accepted</span>
+                <span class="stat-value stat-accepted">@Bookings.Count(b => b.State == "Accepted")</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Completed</span>
+                <span class="stat-value stat-completed">@Bookings.Count(b => b.State == "Completed")</span>
+            </div>
+        </div>
+
+        <div class="bookings-grid">
+            @foreach (var booking in Bookings)
+            {
+                <BookingCard Booking="@booking" OnActionCompleted="@LoadBookingsAsync" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Inject]
+    private IBookingService BookingService { get; set; } = null!;
+
+    private List<BookingDto> Bookings { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private string ErrorMessage { get; set; } = string.Empty;
+    private string? CurrentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var auth = await AuthProvider.GetAuthenticationStateAsync();
+        CurrentUserId = auth.User.FindFirst("sub")?.Value;
+        await LoadBookingsAsync();
+    }
+    
+    private bool IsProvider(BookingDto b)
+        => b.ProviderId == CurrentUserId;
+
+    private bool IsClient(BookingDto b)
+        => b.ClientId == CurrentUserId;
+
+    private async Task LoadBookingsAsync()
+    {
+        IsLoading = true;
+        ErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await BookingService.GetMyBookingsAsync();
+
+            if (result.Success && result.Data != null)
+            {
+                Bookings = result.Data;
+            }
+            else
+            {
+                ErrorMessage = result.ErrorMessage ?? "Failed to load bookings";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}
+
+<style>
+    .my-bookings-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .page-subtitle {
+        font-size: 1rem;
+        color: #6b7280;
+        margin: 0;
+    }
+
+    /* Loading State */
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+    }
+
+    .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid #e5e7eb;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    .loading-text {
+        margin-top: 1rem;
+        font-size: 1rem;
+        color: #6b7280;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Error State */
+    .error-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+
+    .error-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .error-message {
+        font-size: 1rem;
+        color: #6b7280;
+        margin: 0 0 1.5rem 0;
+    }
+
+    .btn-retry {
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-retry:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Empty State */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 5rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+
+    .empty-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .empty-message {
+        font-size: 1rem;
+        color: #6b7280;
+        margin: 0 0 2rem 0;
+    }
+
+    .btn-browse {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .btn-browse:hover {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1.25rem;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e5e7eb;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .stat-pending {
+        color: #f59e0b;
+    }
+
+    .stat-accepted {
+        color: #3b82f6;
+    }
+
+    .stat-completed {
+        color: #10b981;
+    }
+
+    /* Bookings Grid */
+    .bookings-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .my-bookings-page {
+            padding: 1.5rem 1rem;
+        }
+
+        .page-title {
+            font-size: 1.75rem;
+        }
+
+        .stats-bar {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .bookings-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .stats-bar {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+
+
+    @*     <!-- 🔽 YOUR ENTIRE PAGE CONTENT GOES HERE --> *@
+    @*     <div class="my-bookings-page"> *@
+    @* *@
+    @*         <div class="page-header"> *@
+    @*             <h1 class="page-title">My Bookings</h1> *@
+    @*             <p class="page-subtitle">Manage your service bookings and transactions</p> *@
+    @*         </div> *@
+    @* *@
+    @*         @if (IsLoading) *@
+    @*         { *@
+    @*             <div class="loading-container"> *@
+    @*                 <div class="loading-spinner"></div> *@
+    @*                 <p class="loading-text">Loading your bookings...</p> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else if (!string.IsNullOrEmpty(ErrorMessage)) *@
+    @*         { *@
+    @*             <div class="error-container"> *@
+    @*                 <div class="error-icon">⚠️</div> *@
+    @*                 <h3 class="error-title">Unable to Load Bookings</h3> *@
+    @*                 <p class="error-message">@ErrorMessage</p> *@
+    @*                 <button class="btn-retry" @onclick="LoadBookingsAsync"> *@
+    @*                     🔄 Retry *@
+    @*                 </button> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else if (Bookings == null || !Bookings.Any()) *@
+    @*         { *@
+    @*             <div class="empty-state"> *@
+    @*                 <div class="empty-icon">📅</div> *@
+    @*                 <h3 class="empty-title">No Bookings Yet</h3> *@
+    @*                 <p class="empty-message">You don't have any bookings at the moment.</p> *@
+    @*                 <a href="/listings" class="btn-browse"> *@
+    @*                     Browse Services *@
+    @*                 </a> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else *@
+    @*         { *@
+    @*             <div class="stats-bar"> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Total</span> *@
+    @*                     <span class="stat-value">@Bookings.Count</span> *@
+    @*                 </div> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Pending</span> *@
+    @*                     <span class="stat-value stat-pending"> *@
+    @*                         @Bookings.Count(b => b.State == "Pending") *@
+    @*                     </span> *@
+    @*                 </div> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Completed</span> *@
+    @*                     <span class="stat-value stat-completed"> *@
+    @*                         @Bookings.Count(b => b.State == "Completed") *@
+    @*                     </span> *@
+    @*                 </div> *@
+    @*             </div> *@
+    @* *@
+    @*             <div class="bookings-grid"> *@
+    @*                 @foreach (var booking in Bookings) *@
+    @*                 { *@
+    @*                     <BookingCard Booking="@booking" *@
+    @*                                  OnActionCompleted="@LoadBookingsAsync" /> *@
+    @*                 } *@
+    @*             </div> *@
+    @*         } *@
+    @* *@
+    @*     </div> *@
+    @* <!-- 🔼 END PAGE --> *@
+    
+    
+    
+    @* <div class="my-bookings-page"> *@
+    @* *@
+    @*         <div class="page-header"> *@
+    @*             <h1 class="page-title">My Bookings</h1> *@
+    @*             <p class="page-subtitle">Manage your service bookings and transactions</p> *@
+    @*         </div> *@
+    @* *@
+    @*         @if (IsLoading) *@
+    @*         { *@
+    @*             <div class="loading-container"> *@
+    @*                 <div class="loading-spinner"></div> *@
+    @*                 <p class="loading-text">Loading your bookings...</p> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else if (!string.IsNullOrEmpty(ErrorMessage)) *@
+    @*         { *@
+    @*             <div class="error-container"> *@
+    @*                 <div class="error-icon">⚠️</div> *@
+    @*                 <h3 class="error-title">Unable to Load Bookings</h3> *@
+    @*                 <p class="error-message">@ErrorMessage</p> *@
+    @*                 <button class="btn-retry" @onclick="LoadBookingsAsync"> *@
+    @*                     🔄 Retry *@
+    @*                 </button> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else if (Bookings == null || !Bookings.Any()) *@
+    @*         { *@
+    @*             <div class="empty-state"> *@
+    @*                 <div class="empty-icon">📅</div> *@
+    @*                 <h3 class="empty-title">No Bookings Yet</h3> *@
+    @*                 <p class="empty-message">You don't have any bookings at the moment.</p> *@
+    @*                 <a href="/listings" class="btn-browse"> *@
+    @*                     Browse Services *@
+    @*                 </a> *@
+    @*             </div> *@
+    @*         } *@
+    @*         else *@
+    @*         { *@
+    @*             <div class="stats-bar"> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Total</span> *@
+    @*                     <span class="stat-value">@Bookings.Count</span> *@
+    @*                 </div> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Pending</span> *@
+    @*                     <span class="stat-value stat-pending"> *@
+    @*                         @Bookings.Count(b => b.State == "Pending") *@
+    @*                     </span> *@
+    @*                 </div> *@
+    @*                 <div class="stat-card"> *@
+    @*                     <span class="stat-label">Completed</span> *@
+    @*                     <span class="stat-value stat-completed"> *@
+    @*                         @Bookings.Count(b => b.State == "Completed") *@
+    @*                     </span> *@
+    @*                 </div> *@
+    @*             </div> *@
+    @* *@
+    @*             <div class="bookings-grid"> *@
+    @*                 @foreach (var booking in Bookings) *@
+    @*                 { *@
+    @*                     <BookingCard Booking="@booking" *@
+    @*                                  OnActionCompleted="@LoadBookingsAsync" /> *@
+    @*                 } *@
+    @*             </div> *@
+    @*         } *@
+    @* *@
+    @*     </div> *@
+    @*     <!-- 🔼 END PAGE --> *@
+
+</Authorized>
+
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+</AuthorizeView>

@@ -1,0 +1,74 @@
+@* Component: EscrowStatusBadge - Displays escrow status with icon and color *@
+
+<span class="escrow-badge @GetBadgeClass()">
+    <span class="escrow-icon">@GetIcon()</span>
+    <span class="escrow-text">@Status</span>
+</span>
+
+@code {
+    [Parameter]
+    public string Status { get; set; } = string.Empty;
+
+    private string GetBadgeClass()
+    {
+        return Status switch
+        {
+            "Hold" => "badge-hold",
+            "Released" => "badge-released",
+            "Refunded" => "badge-refunded",
+            _ => "badge-default"
+        };
+    }
+
+    private string GetIcon()
+    {
+        return Status switch
+        {
+            "Hold" => "🔒",
+            "Released" => "✅",
+            "Refunded" => "↩️",
+            _ => "❓"
+        };
+    }
+}
+
+<style>
+    .escrow-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.813rem;
+        font-weight: 600;
+        letter-spacing: 0.025em;
+    }
+
+    .escrow-icon {
+        font-size: 1rem;
+    }
+
+    .escrow-text {
+        text-transform: capitalize;
+    }
+
+    .badge-hold {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-released {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-refunded {
+        background-color: #dbeafe;
+        color: #1e3a8a;
+    }
+
+    .badge-default {
+        background-color: #f3f4f6;
+        color: #374151;
+    }
+</style>
