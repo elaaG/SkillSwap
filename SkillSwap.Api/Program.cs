@@ -128,7 +128,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IListingService, ListingService>();
-
+builder.Services.AddScoped<IMatchService, MatchService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
