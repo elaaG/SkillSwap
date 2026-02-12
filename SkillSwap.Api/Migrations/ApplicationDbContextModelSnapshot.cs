@@ -497,6 +497,63 @@ namespace SkillSwap.Api.Migrations
                     b.ToTable("Wallets", (string)null);
                 });
 
+            modelBuilder.Entity("SkillSwap.Api.Models.Booking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ListingId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProviderId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("State")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Bookings");
+                });
+
+            modelBuilder.Entity("SkillSwap.Api.Models.EscrowTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("BookingId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookingId")
+                        .IsUnique();
+
+                    b.ToTable("EscrowTransactions");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -637,6 +694,17 @@ namespace SkillSwap.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SkillSwap.Api.Models.EscrowTransaction", b =>
+                {
+                    b.HasOne("SkillSwap.Api.Models.Booking", "Booking")
+                        .WithOne("Escrow")
+                        .HasForeignKey("SkillSwap.Api.Models.EscrowTransaction", "BookingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Booking");
+                });
+
             modelBuilder.Entity("SkillSwap.API.Models.ApplicationUser", b =>
                 {
                     b.Navigation("UserSkills");
@@ -654,6 +722,11 @@ namespace SkillSwap.Api.Migrations
             modelBuilder.Entity("SkillSwap.API.Models.Skill", b =>
                 {
                     b.Navigation("UserSkills");
+                });
+
+            modelBuilder.Entity("SkillSwap.Api.Models.Booking", b =>
+                {
+                    b.Navigation("Escrow");
                 });
 #pragma warning restore 612, 618
         }

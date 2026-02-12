@@ -56,5 +56,17 @@ namespace SkillSwap.API.Controllers
             
             return Ok(history);
         }
+        
+        [HttpPost("add-credits")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> AddCredits([FromBody] AddCreditsDto dto)
+        {
+            var userId = User.GetUserId();
+            await _walletService.AddInitialCreditsAsync(userId, dto.Amount);
+            
+            return Ok(new { message = $"Successfully added {dto.Amount} credits to your wallet" });
+        }
     }
 }
+
