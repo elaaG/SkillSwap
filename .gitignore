@@ -6,6 +6,10 @@ obj/
 *.user
 *.suo
 *.userprefs
+*.db
+*.sqlite
+*.sqlite3
+
 
 # Rider / Visual Studio
 .vs/
