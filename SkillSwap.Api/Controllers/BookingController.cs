@@ -28,9 +28,21 @@ public class BookingController:ControllerBase
         {
             return Unauthorized("User ID missing from token");
         }
-        Console.WriteLine("CLIENT ID FROM TOKEN: " + clientId);
-        var booking = await _service.CreateAsync(clientId, dto);
-        return Ok(booking);
+        try
+        {
+            var booking = await _service.CreateAsync(clientId, dto);
+            return Ok(booking);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // optional logging
+            Console.WriteLine(ex);
+            return StatusCode(500, "An unexpected error occurred");
+        }
     }
     [HttpPost("{id}/accept")]
     public async Task<IActionResult> Accept(Guid id)

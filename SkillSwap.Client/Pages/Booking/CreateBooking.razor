@@ -72,19 +72,41 @@ else
 
     private async Task HandleCreateBooking()
     {
-        if (!CanBook || Listing == null) return;
-
-        var result = await BookingService.CreateBookingAsync(new CreateBookingDto
+        // if (!CanBook || Listing == null) return;
+        Console.WriteLine("CONFIRM BOOKING CLICKED");
+        if (Listing == null)
         {
-            ListingId = Listing.Id,
-            ProviderId = Listing.ProviderId,
-            AvailabilityId = SelectedAvailabilityId.Value,
-            Price = Listing.CreditsPerHour
-        });
-
-        if (result.Success)
+            Console.WriteLine("Listing is null");
+            return;
+        }
+        if (SelectedAvailabilityId == null)
         {
-            Nav.NavigateTo("/my-bookings");
+            Console.WriteLine("No availability selected");
+            return;
+        }
+
+        try
+        {
+            var result = await BookingService.CreateBookingAsync(new CreateBookingDto
+            {
+                ListingId = Listing.Id,
+                ProviderId = Listing.ProviderId,
+                AvailabilityId = SelectedAvailabilityId.Value,
+                Price = Listing.CreditsPerHour
+            });
+
+            if (result.Success)
+            {
+                Nav.NavigateTo("/my-bookings");
+            }
+            else
+            {
+                Console.WriteLine("Booking failed");
+            }
+        }    catch (Exception ex)
+        {
+            Console.WriteLine("BOOKING ERROR:");
+            Console.WriteLine(ex.ToString());
         }
     }
 }

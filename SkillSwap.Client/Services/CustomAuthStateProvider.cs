@@ -61,14 +61,32 @@ namespace SkillSwap.Client.Services
 
             if (keyValuePairs != null)
             {
-                if (keyValuePairs.TryGetValue("email", out var email))
+                // Try multiple possible keys for the user ID claim
+                if (keyValuePairs.TryGetValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", out var nameIdFull))
+                    claims.Add(new Claim(ClaimTypes.NameIdentifier, nameIdFull.ToString()!));
+                else if (keyValuePairs.TryGetValue("nameid", out var nameId))
+                    claims.Add(new Claim(ClaimTypes.NameIdentifier, nameId.ToString()!));
+                else if (keyValuePairs.TryGetValue("sub", out var sub))
+                    claims.Add(new Claim(ClaimTypes.NameIdentifier, sub.ToString()!));
+
+                if (keyValuePairs.TryGetValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress", out var emailFull))
+                    claims.Add(new Claim(ClaimTypes.Email, emailFull.ToString()!));
+                else if (keyValuePairs.TryGetValue("email", out var email))
                     claims.Add(new Claim(ClaimTypes.Email, email.ToString()!));
 
-                if (keyValuePairs.TryGetValue("name", out var name))
+                if (keyValuePairs.TryGetValue("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name", out var nameFull))
+                    claims.Add(new Claim(ClaimTypes.Name, nameFull.ToString()!));
+                else if (keyValuePairs.TryGetValue("name", out var name))
                     claims.Add(new Claim(ClaimTypes.Name, name.ToString()!));
-
-                if (keyValuePairs.TryGetValue("nameid", out var nameId))
-                    claims.Add(new Claim(ClaimTypes.NameIdentifier, nameId.ToString()!));
+                
+                // Add all other claims as-is for debugging
+                foreach (var kvp in keyValuePairs)
+                {
+                    if (!kvp.Key.Contains("nameidentifier") && !kvp.Key.Contains("email") && !kvp.Key.Contains("name"))
+                    {
+                        claims.Add(new Claim(kvp.Key, kvp.Value.ToString()!));
+                    }
+                }
             }
 
             return claims;
