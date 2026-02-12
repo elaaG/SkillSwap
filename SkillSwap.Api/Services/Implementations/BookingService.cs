@@ -17,7 +17,8 @@ public class BookingService : IBookingService
     }
     public async Task<BookingResponseDto> CreateAsync(string clientId, CreateBookingDto dto)
     {
-        // Get or create client wallet
+        if (dto.ProviderId == clientId)
+            throw new InvalidOperationException("You cannot book your own listing.");
         var clientWallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == clientId);
         
         if (clientWallet == null)
@@ -166,13 +167,18 @@ public class BookingService : IBookingService
         var bookings = await _context.Bookings
             .Where(b => b.ClientId == userId || b.ProviderId == userId)
             .Include(b => b.Escrow)
+            .Include(b => b.Listing)
             .ToListAsync();
 
         return bookings.Select(b => new BookingResponseDto
         {
             BookingId = b.Id,
+            ClientId = b.ClientId,
+            ProviderId = b.ProviderId,
+            ListingId = b.ListingId,
+            ListingTitle = b.Listing.Title,
             State = b.State,
-            EscrowStatus = b.Escrow.Status
+            EscrowStatus = b.Escrow!.Status
         }).ToList();
     }
     

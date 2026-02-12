@@ -1,3 +1,5 @@
+using SkillSwap.API.Models;
+
 namespace SkillSwap.Api.Models;
 
 public class Booking
@@ -7,7 +9,7 @@ public class Booking
     public string ClientId { get; set; }
     public string ProviderId { get; set; }
     public int ListingId { get; set; }
-
+    public Listing Listing { get; set; } = null!; // ✅ NAVIGATION
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
 
