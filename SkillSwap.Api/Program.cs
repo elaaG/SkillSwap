@@ -10,6 +10,8 @@ using SkillSwap.API.Services.Implementations;
 using SkillSwap.API.Services.Interfaces;
 using System.Text.Json.Serialization;
 using System.Text;
+using SkillSwap.Api.Services.Implementations;
+using SkillSwap.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +58,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IBookingService, BookingService>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -125,7 +128,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
 builder.Services.AddScoped<IListingService, ListingService>();
-
+builder.Services.AddScoped<IMatchService, MatchService>();
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -145,6 +148,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseRouting();
 
 app.UseCors("AllowBlazorClient");
 
@@ -170,5 +174,7 @@ if (app.Environment.IsDevelopment())
         logger.LogError(ex, " An error occurred while migrating the database");
     }
 }
+Console.WriteLine("Current Directory: " + Directory.GetCurrentDirectory());
+Console.WriteLine("Connection String: " + builder.Configuration.GetConnectionString("DefaultConnection"));
 
 app.Run();

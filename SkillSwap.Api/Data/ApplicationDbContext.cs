@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using SkillSwap.Api.Models;
 using SkillSwap.API.Models;
 
 namespace SkillSwap.API.Data
@@ -17,7 +18,8 @@ namespace SkillSwap.API.Data
         public DbSet<Listing> Listings { get; set; }
         public DbSet<ListingSkill> ListingSkills { get; set; }
         public DbSet<ListingAvailability> ListingAvailabilities { get; set; }
-        
+        public DbSet<Booking> Bookings { get; set; }
+        public DbSet<EscrowTransaction> EscrowTransactions { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -196,25 +198,31 @@ namespace SkillSwap.API.Data
                     entity.Property(ls => ls.ProficiencyLevel)
                           .HasConversion<string>();
             });
-            
+
             builder.Entity<ListingAvailability>(entity =>
             {
                   entity.ToTable("ListingAvailabilities");
 
-                    entity.HasIndex(a => a.ListingId)
-                          .HasDatabaseName("IX_ListingAvailabilities_ListingId");
+                  entity.HasIndex(a => a.ListingId)
+                        .HasDatabaseName("IX_ListingAvailabilities_ListingId");
 
-                    entity.HasIndex(a => a.StartTime)
-                          .HasDatabaseName("IX_ListingAvailabilities_StartTime");
+                  entity.HasIndex(a => a.StartTime)
+                        .HasDatabaseName("IX_ListingAvailabilities_StartTime");
 
-                    entity.HasIndex(a => a.EndTime)
-                          .HasDatabaseName("IX_ListingAvailabilities_EndTime");
+                  entity.HasIndex(a => a.EndTime)
+                        .HasDatabaseName("IX_ListingAvailabilities_EndTime");
 
-                    entity.HasOne(a => a.Listing)
-                          .WithMany(l => l.ListingAvailabilities)
-                          .HasForeignKey(a => a.ListingId)
-                          .OnDelete(DeleteBehavior.Cascade);
+                  entity.HasOne(a => a.Listing)
+                        .WithMany(l => l.ListingAvailabilities)
+                        .HasForeignKey(a => a.ListingId)
+                        .OnDelete(DeleteBehavior.Cascade);
             });
+            builder.Entity<Booking>(entity => {
+                        entity.HasOne(b => b.Escrow)
+                              .WithOne(e => e.Booking)
+                              .HasForeignKey<EscrowTransaction>(e => e.BookingId)
+                              .OnDelete(DeleteBehavior.Cascade); });
+            
         }
     }
 }
